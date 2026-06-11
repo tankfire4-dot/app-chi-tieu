@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Chi Tiêu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#0B0D17;color:white;overflow:hidden;height:100dvh}
+    ::-webkit-scrollbar{display:none}
+
+    /* Glass */
+    .glass{background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08)}
+    .glass-md{background:rgba(255,255,255,0.09);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.11)}
+
+    /* Gradients */
+    .grad-purple{background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca)}
+    .grad-green{background:linear-gradient(135deg,#064e3b,#065f46,#047857)}
+    .grad-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+    .grad-btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+    .grad-btn-green{background:linear-gradient(135deg,#059669,#10b981)}
+
+    /* Screens */
+    .screen{position:fixed;inset:0;overflow-y:auto;background:#0B0D17;transition:opacity .25s,transform .25s}
+    .screen.hidden{opacity:0;pointer-events:none;transform:translateY(16px)}
+    .screen.active{opacity:1;pointer-events:all;transform:translateY(0)}
+
+    /* Nav */
+    .nav-item.active .ni{color:#818cf8}
+    .nav-item .ni{color:#374151;transition:color .2s}
+
+    /* Chips */
+    .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none}
+    .chip-on{background:#4f46e5;color:white}
+    .chip-off{background:rgba(255,255,255,0.07);color:#9ca3af;border:1px solid rgba(255,255,255,0.1)}
+
+    /* Input */
+    .inp{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;color:white;font-size:15px;width:100%;transition:border .2s,background .2s;font-family:inherit}
+    .inp:focus{outline:none;border-color:#6366f1;background:rgba(99,102,241,0.08)}
+    .inp::placeholder{color:#4b5563}
+
+    /* Tab pill */
+    .tpill{flex:1;padding:9px 4px;font-size:12px;font-weight:600;border-radius:10px;text-align:center;transition:all .2s;cursor:pointer}
+    .tpill.on{background:#4f46e5;color:white}
+    .tpill.off{color:#6b7280}
+
+    /* Progress */
+    .prog-bg{background:rgba(255,255,255,0.08);border-radius:99px;height:5px}
+    .prog-fill{height:5px;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
+
+    /* TX row */
+    .tx-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;transition:background .15s}
+    .tx-row:last-child{border-bottom:none}
+    .tx-row:active{background:rgba(255,255,255,0.03);margin:0 -16px;padding:12px 16px}
+
+    /* Numpad */
+    .nk{display:flex;align-items:center;justify-content:center;height:56px;border-radius:16px;font-size:20px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.07);color:white;transition:all .1s;user-select:none}
+    .nk:active{background:rgba(255,255,255,0.18);transform:scale(0.93)}
+    .nk.del{background:rgba(99,102,241,0.15);color:#818cf8}
+    .nk.zero3{background:rgba(255,255,255,0.04);color:#9ca3af;font-size:15px}
+
+    /* Button */
+    .btn{width:100%;padding:16px;border-radius:18px;font-weight:700;font-size:15px;color:white;transition:transform .1s,opacity .1s;cursor:pointer;border:none;font-family:inherit}
+    .btn:active{transform:scale(0.97);opacity:.88}
+
+    /* Toast */
+    .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 20px;border-radius:99px;font-size:14px;font-weight:600;white-space:nowrap;transition:all .3s cubic-bezier(.16,1,.3,1);pointer-events:none}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .toast.hide{opacity:0;transform:translateX(-50%) translateY(-20px)}
+    .toast-ok{background:#10b981;color:white}
+    .toast-err{background:#ef4444;color:white}
+
+    /* Bottom sheet */
+    .bsheet-wrap{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;background:rgba(0,0,0,0);transition:background .25s}
+    .bsheet-wrap.open{background:rgba(0,0,0,0.65)}
+    .bsheet-wrap.closed{pointer-events:none}
+    .bsheet{transform:translateY(100%);transition:transform .3s cubic-bezier(.16,1,.3,1);border-radius:28px 28px 0 0;padding:24px 20px 32px;max-width:480px;width:100%;margin:0 auto;background:#1a1d2e;border:1px solid rgba(255,255,255,0.08)}
+    .bsheet-wrap.open .bsheet{transform:translateY(0)}
+    .drag-pill{width:40px;height:4px;background:rgba(255,255,255,0.2);border-radius:99px;margin:0 auto 20px}
+
+    /* Badge */
+    .badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;display:inline-block}
+
+    /* Animate number */
+    @keyframes pop{0%{transform:scale(1.1)}100%{transform:scale(1)}}
+    .pop{animation:pop .15s ease}
+
+    /* Shimmer */
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* Setup */
+    .setup-dot{width:8px;height:8px;border-radius:99px;background:rgba(255,255,255,0.15)}
+    .setup-dot.active{background:#6366f1;width:24px}
+
+    /* Month chip */
+    .mchip{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+    .mchip.active{background:#4f46e5;color:white}
+    .mchip.inactive{color:#6b7280}
+
+    /* Swipe hint on tx */
+    .tx-badge-coll{width:20px;height:20px;border-radius:99px;background:#10b981;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+    /* Chart bar */
+    .bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+    .bar-wrap{width:100%;display:flex;justify-content:center;align-items:flex-end;height:60px}
+    .bar{width:20px;border-radius:6px 6px 3px 3px;min-height:4px;transition:height .6s cubic-bezier(.16,1,.3,1)}
+  </style>
+</head>
+<body>
+
+<!-- =========== TOAST =========== -->
+<div id="toast" class="toast hide"></div>
+
+<!-- =========== SETUP SCREEN =========== -->
+<div id="s-setup" class="screen active" style="display:flex;flex-direction:column;justify-content:center;padding:32px 24px">
+  <div class="text-center mb-10">
+    <div class="w-20 h-20 rounded-3xl grad-btn flex items-center justify-center mx-auto mb-5" style="font-size:36px">💸</div>
+    <h1 class="text-2xl font-extrabold text-white mb-2">Chi Tiêu</h1>
+    <p class="text-gray-400 text-sm">Kết nối với Google Sheets của ông<br/>để bắt đầu sử dụng</p>
+  </div>
+
+  <div class="glass rounded-3xl p-5 mb-4">
+    <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-3">URL Google Apps Script</p>
+    <input id="setup-url" class="inp mb-3" placeholder="https://script.google.com/macros/s/..." />
+    <p class="text-gray-600 text-xs">Lấy URL sau khi Deploy Web App trong Apps Script IDE</p>
+  </div>
+
+  <button class="btn grad-btn mb-3" onclick="doSetup()">Kết nối & Bắt đầu</button>
+  <button class="text-indigo-400 text-sm font-semibold py-3" onclick="skipSetup()">Bỏ qua · Dùng demo</button>
+</div>
+
+<!-- =========== HOME SCREEN =========== -->
+<div id="s-home" class="screen hidden" style="padding-bottom:80px">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between px-5 pt-14 pb-2 flex-shrink-0">
+    <div>
+      <p class="text-gray-500 text-xs font-medium">Xin chào,</p>
+      <p class="text-white text-lg font-bold">Khoa 👋</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="undo-btn" onclick="showToast('Đã xóa dòng vừa ghi ✓','ok')" class="glass w-10 h-10 rounded-full items-center justify-center btn-press hidden" style="display:none">
+        <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h10a5 5 0 0 1 0 10H3m0-10 4-4M3 10l4 4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Month selector -->
+  <div class="flex gap-2 px-5 mb-3 overflow-x-auto" style="scrollbar-width:none">
+    <span class="mchip inactive flex-shrink-0" onclick="selectMonth(this,'T4')">Tháng 4</span>
+    <span class="mchip inactive flex-shrink-0" onclick="selectMonth(this,'T5')">Tháng 5</span>
+    <span class="mchip active flex-shrink-0" onclick="selectMonth(this,'T6')">Tháng 6</span>
+    <span class="mchip inactive flex-shrink-0" onclick="selectMonth(this,'T7')">Tháng 7</span>
+  </div>
+
+  <!-- Balance Card -->
+  <div class="mx-4 rounded-3xl p-6 grad-purple relative overflow-hidden mb-5">
+    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
+    <div class="absolute -bottom-14 -left-6 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.04)"></div>
+    <div class="relative">
+      <p class="text-indigo-300 text-xs font-medium uppercase tracking-widest mb-1">Thực chi · Tháng 6</p>
+      <p class="text-white font-black mb-4" style="font-size:2.6rem;letter-spacing:-1px">4.250.000<span class="text-2xl text-indigo-300 font-semibold">đ</span></p>
+      <div class="flex gap-3">
+        <div class="glass rounded-2xl px-4 py-2.5 flex-1">
+          <p class="text-indigo-300 text-xs mb-0.5">Tổng chi</p>
+          <p class="text-white font-bold text-sm">4.570.000đ</p>
+        </div>
+        <div class="glass rounded-2xl px-4 py-2.5 flex-1">
+          <p class="text-green-300 text-xs mb-0.5">Được trả lại</p>
+          <p class="text-white font-bold text-sm">320.000đ</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="flex gap-3 px-4 mb-6">
+    <button onclick="showAdd(0)" class="glass-md flex-1 rounded-2xl py-4 flex flex-col items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <span class="text-xs font-semibold text-gray-200">Ghi nhanh</span>
+    </button>
+    <button onclick="showAdd(1)" class="glass-md flex-1 rounded-2xl py-4 flex flex-col items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <span class="text-xs font-semibold text-gray-200">Chia bill</span>
+    </button>
+    <button onclick="showAdd(2)" class="glass-md flex-1 rounded-2xl py-4 flex flex-col items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <span class="text-xs font-semibold text-gray-200">Được trả</span>
+    </button>
+  </div>
+
+  <!-- Transaction list -->
+  <div class="px-4">
+    <p class="text-white font-bold text-base mb-4">Giao dịch gần đây</p>
+
+    <p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2">Hôm nay · 09/06</p>
+    <div class="glass rounded-2xl px-4 mb-4">
+      <div class="tx-row" onclick="openTxDetail({name:'Khoa',detail:'Ăn trưa văn phòng',cat:'Tiền ăn',type:'Cá nhân',amount:150000,date:'09/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center text-indigo-300 font-bold text-sm flex-shrink-0">K</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Ăn trưa văn phòng</p>
+          <p class="text-gray-500 text-xs">Khoa · <span class="text-indigo-400">Tiền ăn</span></p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+150.000đ</p>
+      </div>
+      <div class="tx-row" onclick="openTxDetail({name:'Quan',detail:'Đổ xăng',cat:'Đi lại',type:'Cho mượn/ Ứng',amount:200000,date:'09/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-orange-900 flex items-center justify-center text-orange-300 font-bold text-sm flex-shrink-0">Q</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Đổ xăng</p>
+          <p class="text-gray-500 text-xs">Quan · <span class="text-orange-400">Đi lại</span></p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <p class="text-red-400 font-bold text-sm">+200.000đ</p>
+        </div>
+      </div>
+      <div class="tx-row" onclick="openTxDetail({name:'Chia bill',detail:'Nhậu cuối tuần (Khoa, Quan, A.Hải, Phi)',cat:'Chia bill',type:'split',amount:500000,date:'09/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-purple-900 flex items-center justify-center text-purple-300 flex-shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Nhậu cuối tuần</p>
+          <p class="text-gray-500 text-xs truncate">Chia bill · Khoa, Quan +2</p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+500.000đ</p>
+      </div>
+    </div>
+
+    <p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2">Hôm qua · 08/06</p>
+    <div class="glass rounded-2xl px-4 mb-4">
+      <div class="tx-row" onclick="openTxDetail({name:'A.Hải',detail:'Trả lại tiền ăn hôm trước',cat:'Được trả',type:'Cho mượn/ Ứng',amount:-120000,date:'08/06/2026',collected:true})">
+        <div class="w-10 h-10 rounded-full bg-emerald-900 flex items-center justify-center text-emerald-300 font-bold text-sm flex-shrink-0">H</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">A.Hải trả lại tiền ăn</p>
+          <p class="text-gray-500 text-xs">A.Hải · <span class="text-emerald-400">Được trả</span></p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="tx-badge-coll"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+          <p class="text-emerald-400 font-bold text-sm">-120.000đ</p>
+        </div>
+      </div>
+      <div class="tx-row" onclick="openTxDetail({name:'Phi',detail:'Cà phê buổi sáng',cat:'Tiền ăn',type:'Cho mượn/ Ứng',amount:80000,date:'08/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-pink-900 flex items-center justify-center text-pink-300 font-bold text-sm flex-shrink-0">P</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Cà phê buổi sáng</p>
+          <p class="text-gray-500 text-xs">Phi · <span class="text-indigo-400">Tiền ăn</span></p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+80.000đ</p>
+      </div>
+      <div class="tx-row" onclick="openTxDetail({name:'Khoa',detail:'Nạp tiền điện thoại',cat:'Tiền trọ/ điện nước',type:'Cá nhân',amount:17000,date:'08/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">K</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Nạp tiền điện thoại</p>
+          <p class="text-gray-500 text-xs">Khoa · <span class="text-blue-400">Tiện ích</span></p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+17.000đ</p>
+      </div>
+    </div>
+
+    <p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2">07/06</p>
+    <div class="glass rounded-2xl px-4 mb-6">
+      <div class="tx-row" onclick="openTxDetail({name:'Khoa',detail:'Gửi về nhà',cat:'Gửi về',type:'Cá nhân',amount:2000000,date:'07/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-rose-900 flex items-center justify-center text-rose-300 font-bold text-sm flex-shrink-0">K</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Gửi về nhà</p>
+          <p class="text-gray-500 text-xs">Khoa · <span class="text-rose-400">Gửi về</span></p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+2.000.000đ</p>
+      </div>
+      <div class="tx-row" onclick="openTxDetail({name:'Khoa',detail:'Sửa xe máy',cat:'Đi lại',type:'Cá nhân',amount:200000,date:'07/06/2026',collected:false})">
+        <div class="w-10 h-10 rounded-full bg-yellow-900 flex items-center justify-center text-yellow-300 font-bold text-sm flex-shrink-0">K</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-sm font-semibold truncate">Sửa xe máy</p>
+          <p class="text-gray-500 text-xs">Khoa · <span class="text-orange-400">Đi lại</span></p>
+        </div>
+        <p class="text-red-400 font-bold text-sm flex-shrink-0">+200.000đ</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========== ADD SCREEN =========== -->
+<div id="s-add" class="screen hidden">
+
+  <div class="flex items-center gap-4 px-5 pt-14 pb-4 flex-shrink-0 sticky top-0 z-10" style="background:#0B0D17">
+    <button onclick="goBack()" class="glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+      <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+    </button>
+    <h2 class="text-white font-bold text-lg">Ghi chi tiêu</h2>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mx-4 mb-5 flex gap-1 glass rounded-2xl p-1.5 flex-shrink-0">
+    <div id="tp0" class="tpill on" onclick="switchTab(0)">Ghi nhanh</div>
+    <div id="tp1" class="tpill off" onclick="switchTab(1)">Chia bill</div>
+    <div id="tp2" class="tpill off" onclick="switchTab(2)">Được trả hộ</div>
+  </div>
+
+  <!-- TAB 0: Ghi nhanh -->
+  <div id="tpanel0" class="px-4" style="overflow-y:auto;max-height:calc(100dvh - 180px)">
+    <div class="glass rounded-3xl p-5 mb-4 text-center">
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Số tiền</p>
+      <p id="disp0" class="text-white font-black mb-1" style="font-size:3rem;letter-spacing:-2px;min-height:3.5rem;line-height:1.1">0</p>
+      <p id="disp0-fmt" class="text-indigo-400 text-sm font-medium h-5"></p>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-5">
+      <div class="nk" onclick="nk('1')">1</div><div class="nk" onclick="nk('2')">2</div><div class="nk" onclick="nk('3')">3</div>
+      <div class="nk" onclick="nk('4')">4</div><div class="nk" onclick="nk('5')">5</div><div class="nk" onclick="nk('6')">6</div>
+      <div class="nk" onclick="nk('7')">7</div><div class="nk" onclick="nk('8')">8</div><div class="nk" onclick="nk('9')">9</div>
+      <div class="nk zero3" onclick="nk('000')">000</div><div class="nk" onclick="nk('0')">0</div>
+      <div class="nk del" onclick="nk('del')">⌫</div>
+    </div>
+
+    <!-- Người chi — single select -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Người chi</p>
+    <div id="chips0" class="flex flex-wrap gap-2 mb-5">
+      <span class="chip chip-on"  onclick="selectPerson0(this)">Khoa</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">A.Hải</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">C.Kỳ</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Quan</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">A.Huy</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">C.Lan</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Phi</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Trí</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Lực</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Minh</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Việt</span>
+      <span class="chip chip-off" onclick="selectPerson0(this)">Hân</span>
+    </div>
+
+    <!-- Phân loại badge (auto) -->
+    <div id="phanloai0" class="flex items-center gap-2 mb-4 px-1">
+      <span class="text-gray-500 text-xs font-semibold uppercase tracking-wide">Phân loại</span>
+      <span id="phanloai0-badge" class="badge" style="background:rgba(99,102,241,0.2);color:#a5b4fc">Cá nhân</span>
+      <span class="text-gray-600 text-xs">→ Đã thu tự động ✓</span>
+    </div>
+
+    <!-- Hạng mục — dynamic -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Hạng mục</p>
+    <div id="hangmuc0" class="flex flex-wrap gap-2 mb-5">
+      <!-- filled by JS -->
+    </div>
+
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Nội dung</p>
+    <input type="text" placeholder="Mô tả chi tiết..." class="inp mb-5"/>
+    <button class="btn grad-btn mb-8" onclick="submitEntry()">Ghi lại</button>
+  </div>
+
+  <!-- TAB 1: Chia bill -->
+  <div id="tpanel1" class="px-4 hidden" style="overflow-y:auto;max-height:calc(100dvh - 180px)">
+    <div class="glass rounded-3xl p-5 mb-4 text-center">
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Tổng tiền bill</p>
+      <p id="disp1" class="text-white font-black mb-1" style="font-size:3rem;letter-spacing:-2px;min-height:3.5rem;line-height:1.1">0</p>
+      <div id="split-info" class="inline-block mt-1 px-4 py-2 rounded-xl" style="background:rgba(99,102,241,0.15)">
+        <p class="text-indigo-400 text-sm font-semibold">Chọn người để tính</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-5">
+      <div class="nk" onclick="nk1('1')">1</div><div class="nk" onclick="nk1('2')">2</div><div class="nk" onclick="nk1('3')">3</div>
+      <div class="nk" onclick="nk1('4')">4</div><div class="nk" onclick="nk1('5')">5</div><div class="nk" onclick="nk1('6')">6</div>
+      <div class="nk" onclick="nk1('7')">7</div><div class="nk" onclick="nk1('8')">8</div><div class="nk" onclick="nk1('9')">9</div>
+      <div class="nk zero3" onclick="nk1('000')">000</div><div class="nk" onclick="nk1('0')">0</div>
+      <div class="nk del" onclick="nk1('del')">⌫</div>
+    </div>
+
+    <!-- Người chia — multi select, Khoa bắt buộc -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Những người chia</p>
+    <p class="text-gray-600 text-xs mb-2">Khoa bắt buộc phải có · bấm chọn thêm người</p>
+    <div id="split-chips" class="flex flex-wrap gap-2 mb-5">
+      <span class="chip chip-on" style="opacity:.6;cursor:default">Khoa</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">A.Hải</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">C.Kỳ</span>
+      <span class="chip chip-on"  onclick="toggleChip(this,true)">Quan</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">A.Huy</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">C.Lan</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">Phi</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">Trí</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">Lực</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">Minh</span>
+      <span class="chip chip-off" onclick="toggleChip(this,true)">Việt</span>
+    </div>
+
+    <!-- Hạng mục của Khoa (Cá nhân) -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Hạng mục</p>
+    <p class="text-gray-600 text-xs mb-2">Áp dụng cho phần Khoa · người khác ghi vào "Cơm nước / Khác"</p>
+    <div id="hangmuc1" class="flex flex-wrap gap-2 mb-5">
+      <!-- filled by JS -->
+    </div>
+
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Nội dung</p>
+    <input type="text" placeholder="Nhậu cuối tuần, ăn sinh nhật..." class="inp mb-5"/>
+    <button class="btn grad-btn-purple mb-8" onclick="submitEntry()">Ghi chia bill</button>
+  </div>
+
+  <!-- TAB 2: Được trả hộ -->
+  <div id="tpanel2" class="px-4 hidden" style="overflow-y:auto;max-height:calc(100dvh - 180px)">
+    <div class="glass rounded-3xl p-5 mb-4 text-center">
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Tổng tiền được trả hộ</p>
+      <p id="disp2" class="text-white font-black mb-1" style="font-size:3rem;letter-spacing:-2px;min-height:3.5rem;line-height:1.1">0</p>
+      <p class="text-emerald-400 text-xs font-medium mt-1">Chia đôi · mỗi người chịu một nửa</p>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-5">
+      <div class="nk" onclick="nk2('1')">1</div><div class="nk" onclick="nk2('2')">2</div><div class="nk" onclick="nk2('3')">3</div>
+      <div class="nk" onclick="nk2('4')">4</div><div class="nk" onclick="nk2('5')">5</div><div class="nk" onclick="nk2('6')">6</div>
+      <div class="nk" onclick="nk2('7')">7</div><div class="nk" onclick="nk2('8')">8</div><div class="nk" onclick="nk2('9')">9</div>
+      <div class="nk zero3" onclick="nk2('000')">000</div><div class="nk" onclick="nk2('0')">0</div>
+      <div class="nk del" onclick="nk2('del')">⌫</div>
+    </div>
+
+    <!-- Ai trả hộ — single select, không có Khoa -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Ai trả hộ cho ông?</p>
+    <div id="chips2" class="flex flex-wrap gap-2 mb-5">
+      <span class="chip chip-off" onclick="selectPerson2(this)">A.Hải</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">C.Kỳ</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Quan</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">A.Huy</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">C.Lan</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Phi</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Trí</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Lực</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Minh</span>
+      <span class="chip chip-off" onclick="selectPerson2(this)">Việt</span>
+    </div>
+
+    <!-- 2 dòng sẽ ghi -->
+    <div id="dctra-preview" class="glass rounded-2xl p-4 mb-5 hidden">
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-3">Sẽ ghi 2 dòng vào Sheet</p>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <span class="badge" style="background:rgba(99,102,241,0.2);color:#a5b4fc">Cá nhân</span>
+            <span class="text-white text-sm">Khoa</span>
+          </div>
+          <span id="dctra-khoa-amt" class="text-red-400 text-sm font-bold"></span>
+        </div>
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <span class="badge" style="background:rgba(16,185,129,0.15);color:#6ee7b7">Cho mượn</span>
+            <span id="dctra-payer-name" class="text-white text-sm"></span>
+          </div>
+          <span id="dctra-payer-amt" class="text-emerald-400 text-sm font-bold"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hạng mục (Cá nhân list cho Khoa) -->
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Hạng mục</p>
+    <div id="hangmuc2" class="flex flex-wrap gap-2 mb-5">
+      <!-- filled by JS -->
+    </div>
+
+    <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Nội dung</p>
+    <input type="text" placeholder="Tiền gì..." class="inp mb-5"/>
+    <button class="btn grad-btn-green mb-8" onclick="submitEntry()">Ghi nhận</button>
+  </div>
+</div>
+
+<!-- =========== DEBTS SCREEN =========== -->
+<div id="s-debts" class="screen hidden" style="overflow-y:auto;padding-bottom:80px">
+  <div class="px-5 pt-14 pb-4">
+    <h2 class="text-white font-bold text-xl">Công nợ</h2>
+    <p class="text-gray-500 text-xs mt-0.5">Cập nhật tới 09/06/2026</p>
+  </div>
+
+  <!-- Summary card -->
+  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(135deg,#1a1f3c,#2d1b4e)">
+    <div class="absolute -top-8 -right-8 w-36 h-36 rounded-full" style="background:rgba(139,92,246,0.12)"></div>
+    <div class="relative">
+      <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Người ta đang nợ ông</p>
+      <p class="text-3xl font-extrabold text-emerald-400 mb-4">+870.000đ</p>
+      <div class="flex gap-3">
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.06)">
+          <p class="text-emerald-400 text-xs mb-0.5">Họ nợ ông</p>
+          <p class="text-white font-bold text-sm">1.200.000đ</p>
+        </div>
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.06)">
+          <p class="text-red-400 text-xs mb-0.5">Ông nợ họ</p>
+          <p class="text-white font-bold text-sm">330.000đ</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4">
+    <!-- Người nợ ông -->
+    <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3">Người nợ ông 💰</p>
+    <div class="glass rounded-2xl overflow-hidden mb-5">
+      <div class="flex items-center gap-3 p-4 border-b" style="border-color:rgba(255,255,255,0.05)" onclick="openDebtDetail({name:'A. Hải',avatar:'H',color:'indigo',amount:450000,notes:'Nhậu 01/06, Ăn trưa 03/06'})">
+        <div class="w-11 h-11 rounded-full bg-indigo-800 flex items-center justify-center text-indigo-200 font-bold flex-shrink-0">H</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm">A. Hải</p>
+          <p class="text-gray-500 text-xs truncate">Nhậu 01/06 · Ăn trưa 03/06</p>
+        </div>
+        <div class="text-right">
+          <p class="text-emerald-400 font-bold">+450.000đ</p>
+          <p class="text-gray-600 text-xs mt-0.5">2 khoản →</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-4 border-b" style="border-color:rgba(255,255,255,0.05)" onclick="openDebtDetail({name:'Quan',avatar:'Q',color:'purple',amount:350000,notes:'Chia bill sinh nhật 05/06'})">
+        <div class="w-11 h-11 rounded-full bg-purple-900 flex items-center justify-center text-purple-200 font-bold flex-shrink-0">Q</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm">Quan</p>
+          <p class="text-gray-500 text-xs truncate">Chia bill sinh nhật 05/06</p>
+        </div>
+        <div class="text-right">
+          <p class="text-emerald-400 font-bold">+350.000đ</p>
+          <p class="text-gray-600 text-xs mt-0.5">1 khoản →</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-4" onclick="openDebtDetail({name:'Phi',avatar:'P',color:'pink',amount:400000,notes:'Cà phê 08/06, Ăn sáng 06/06'})">
+        <div class="w-11 h-11 rounded-full bg-pink-900 flex items-center justify-center text-pink-200 font-bold flex-shrink-0">P</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm">Phi</p>
+          <p class="text-gray-500 text-xs truncate">Cà phê 08/06 · Ăn sáng 06/06</p>
+        </div>
+        <div class="text-right">
+          <p class="text-emerald-400 font-bold">+400.000đ</p>
+          <p class="text-gray-600 text-xs mt-0.5">2 khoản →</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ông nợ người -->
+    <p class="text-red-400 text-xs font-bold uppercase tracking-widest mb-3">Ông đang nợ 😅</p>
+    <div class="glass rounded-2xl overflow-hidden mb-5">
+      <div id="debt-ky" class="flex items-center gap-3 p-4 border-b" style="border-color:rgba(255,255,255,0.05)">
+        <div class="w-11 h-11 rounded-full bg-amber-900 flex items-center justify-center text-amber-200 font-bold flex-shrink-0">K</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm">C. Kỳ</p>
+          <p class="text-gray-500 text-xs">Mua đồ hộ 04/06</p>
+        </div>
+        <div class="text-right">
+          <p class="text-red-400 font-bold">-200.000đ</p>
+          <button onclick="event.stopPropagation();showPaidSheet('C. Kỳ','200.000đ','debt-ky')" class="text-indigo-400 text-xs mt-0.5">Đã trả →</button>
+        </div>
+      </div>
+      <div id="debt-tri" class="flex items-center gap-3 p-4">
+        <div class="w-11 h-11 rounded-full bg-teal-900 flex items-center justify-center text-teal-200 font-bold flex-shrink-0">T</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm">Trí</p>
+          <p class="text-gray-500 text-xs">Chia xăng 07/06</p>
+        </div>
+        <div class="text-right">
+          <p class="text-red-400 font-bold">-130.000đ</p>
+          <button onclick="event.stopPropagation();showPaidSheet('Trí','130.000đ','debt-tri')" class="text-indigo-400 text-xs mt-0.5">Đã trả →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Đã xong -->
+    <p class="text-gray-600 text-xs font-bold uppercase tracking-widest mb-3">Đã thanh toán ✅</p>
+    <div id="settled-list" class="glass rounded-2xl overflow-hidden opacity-40">
+      <div class="flex items-center gap-3 p-4">
+        <div class="w-11 h-11 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 font-bold flex-shrink-0">L</div>
+        <div class="flex-1">
+          <p class="text-gray-500 font-semibold text-sm line-through">Lực</p>
+          <p class="text-gray-600 text-xs">300.000đ · Thanh toán 06/06</p>
+        </div>
+        <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========== STATS SCREEN =========== -->
+<div id="s-stats" class="screen hidden" style="overflow-y:auto;padding-bottom:80px">
+  <div class="px-5 pt-14 pb-4 flex items-center justify-between">
+    <h2 class="text-white font-bold text-xl">Thống kê</h2>
+    <div class="flex gap-2">
+      <select class="glass text-white text-xs rounded-xl px-3 py-2 border-0 focus:outline-none" style="font-family:inherit">
+        <option>Tháng 6</option><option>Tháng 5</option><option>Tháng 4</option>
+      </select>
+      <select class="glass text-white text-xs rounded-xl px-3 py-2 border-0 focus:outline-none" style="font-family:inherit">
+        <option>2026</option><option>2025</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="px-4">
+    <!-- Summary -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div class="grad-purple rounded-2xl p-4">
+        <p class="text-indigo-300 text-xs mb-1">Tổng chi</p>
+        <p class="text-white text-xl font-bold">4.570.000đ</p>
+        <p class="text-indigo-300 text-xs mt-1">↑ 12% so T5</p>
+      </div>
+      <div class="grad-green rounded-2xl p-4">
+        <p class="text-emerald-300 text-xs mb-1">Thực chi</p>
+        <p class="text-white text-xl font-bold">4.250.000đ</p>
+        <p class="text-emerald-300 text-xs mt-1">Sau trả lại 320k</p>
+      </div>
+    </div>
+
+    <!-- Tồn đầu / cuối tháng -->
+    <div class="glass rounded-2xl p-4 mb-4">
+      <p class="text-white font-semibold mb-3">Dòng tiền tháng 6</p>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 text-sm">Tồn đầu tháng</span>
+          <span class="text-white font-semibold text-sm">6.128.000đ</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 text-sm">+ Thu nhập</span>
+          <span class="text-emerald-400 font-semibold text-sm">+9.500.000đ</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 text-sm">− Chi tiêu</span>
+          <span class="text-red-400 font-semibold text-sm">-4.250.000đ</span>
+        </div>
+        <div class="h-px my-1" style="background:rgba(255,255,255,0.08)"></div>
+        <div class="flex justify-between items-center">
+          <span class="text-white font-bold text-sm">Tồn cuối tháng</span>
+          <span class="text-indigo-300 font-bold text-base">10.551.000đ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar chart -->
+    <div class="glass rounded-2xl p-4 mb-4">
+      <p class="text-white font-semibold mb-4">Chi tiêu 7 ngày qua</p>
+      <div class="flex gap-1 items-end">
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:28px;background:#6366f1"></div></div>
+          <p class="text-gray-600 text-xs">03</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:45px;background:#6366f1"></div></div>
+          <p class="text-gray-600 text-xs">04</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:20px;background:#6366f1"></div></div>
+          <p class="text-gray-600 text-xs">05</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:55px;background:#6366f1"></div></div>
+          <p class="text-gray-600 text-xs">06</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:38px;background:#6366f1"></div></div>
+          <p class="text-gray-600 text-xs">07</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:22px;background:#a5b4fc"></div></div>
+          <p class="text-gray-600 text-xs">08</p>
+        </div>
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="height:60px;background:#818cf8"></div></div>
+          <p class="text-indigo-400 text-xs font-bold">09</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per person -->
+    <div class="glass rounded-2xl p-5 mb-4">
+      <p class="text-white font-semibold mb-4">Theo người</p>
+      <div class="space-y-4">
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold">K</div>
+              <span class="text-gray-200 text-sm">Khoa</span>
+            </div>
+            <span class="text-white text-sm font-bold">1.500.000đ</span>
+          </div>
+          <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:70%"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-purple-800 flex items-center justify-center text-xs font-bold">Q</div>
+              <span class="text-gray-200 text-sm">Quan</span>
+            </div>
+            <span class="text-white text-sm font-bold">900.000đ</span>
+          </div>
+          <div class="prog-bg"><div class="prog-fill bg-purple-500" style="width:42%"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-pink-900 flex items-center justify-center text-xs font-bold">P</div>
+              <span class="text-gray-200 text-sm">Phi</span>
+            </div>
+            <span class="text-white text-sm font-bold">650.000đ</span>
+          </div>
+          <div class="prog-bg"><div class="prog-fill bg-pink-500" style="width:30%"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-amber-900 flex items-center justify-center text-xs font-bold">H</div>
+              <span class="text-gray-200 text-sm">A.Hải</span>
+            </div>
+            <span class="text-white text-sm font-bold">500.000đ</span>
+          </div>
+          <div class="prog-bg"><div class="prog-fill bg-amber-400" style="width:23%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div class="glass rounded-2xl p-5 mb-4">
+      <p class="text-white font-semibold mb-4">Theo hạng mục</p>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-900 flex items-center justify-center text-lg">🍜</div>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1"><span class="text-gray-200 text-sm">Tiền ăn</span><span class="text-white text-sm font-bold">2.100.000đ</span></div>
+            <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-rose-900 flex items-center justify-center text-lg">🏠</div>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1"><span class="text-gray-200 text-sm">Gửi về</span><span class="text-white text-sm font-bold">2.000.000đ</span></div>
+            <div class="prog-bg"><div class="prog-fill bg-rose-500" style="width:62%"></div></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-orange-900 flex items-center justify-center text-lg">⛽</div>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1"><span class="text-gray-200 text-sm">Đi lại</span><span class="text-white text-sm font-bold">450.000đ</span></div>
+            <div class="prog-bg"><div class="prog-fill bg-orange-400" style="width:14%"></div></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center text-lg">📦</div>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1"><span class="text-gray-200 text-sm">Khác</span><span class="text-white text-sm font-bold">20.000đ</span></div>
+            <div class="prog-bg"><div class="prog-fill bg-gray-500" style="width:1%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========== BOTTOM NAV =========== -->
+<nav id="nav" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-10 hidden"
+  style="background:rgba(11,13,23,0.95);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,0.06);padding-bottom:env(safe-area-inset-bottom)">
+  <div class="flex">
+    <button id="nav-home" onclick="go('home')" class="nav-item flex-1 py-3 flex flex-col items-center gap-1">
+      <svg class="ni w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      <span class="ni text-xs font-semibold">Trang chủ</span>
+    </button>
+    <button id="nav-debts" onclick="go('debts')" class="nav-item flex-1 py-3 flex flex-col items-center gap-1">
+      <svg class="ni w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span class="ni text-xs font-semibold">Công nợ</span>
+    </button>
+    <button id="nav-stats" onclick="go('stats')" class="nav-item flex-1 py-3 flex flex-col items-center gap-1">
+      <svg class="ni w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span class="ni text-xs font-semibold">Thống kê</span>
+    </button>
+  </div>
+</nav>
+
+<!-- =========== BOTTOM SHEETS =========== -->
+
+<!-- TX Detail sheet -->
+<div id="tx-sheet" class="bsheet-wrap closed" onclick="closeBsheet('tx-sheet')">
+  <div class="bsheet" onclick="event.stopPropagation()">
+    <div class="drag-pill"></div>
+    <div class="flex items-center gap-3 mb-4">
+      <div id="tx-avatar" class="w-12 h-12 rounded-full bg-indigo-800 flex items-center justify-center text-indigo-200 font-bold text-base flex-shrink-0"></div>
+      <div>
+        <p id="tx-detail-title" class="text-white font-bold text-base"></p>
+        <p id="tx-detail-sub" class="text-gray-500 text-xs"></p>
+      </div>
+      <p id="tx-detail-amt" class="ml-auto font-bold text-lg"></p>
+    </div>
+    <div class="space-y-3 mb-5">
+      <div class="flex justify-between"><span class="text-gray-500 text-sm">Ngày</span><span id="tx-date" class="text-white text-sm font-medium"></span></div>
+      <div class="flex justify-between"><span class="text-gray-500 text-sm">Phân loại</span><span id="tx-type" class="text-white text-sm font-medium"></span></div>
+      <div class="flex justify-between"><span class="text-gray-500 text-sm">Hạng mục</span><span id="tx-cat" class="text-white text-sm font-medium"></span></div>
+      <div class="flex justify-between"><span class="text-gray-500 text-sm">Trạng thái</span><span id="tx-status" class="text-sm font-semibold"></span></div>
+    </div>
+    <div class="flex gap-2">
+      <button id="tx-collect-btn" onclick="markCollected()" class="btn grad-btn-green flex-1" style="padding:12px">Đánh dấu đã thu</button>
+      <button onclick="closeBsheet('tx-sheet')" class="btn flex-1" style="padding:12px;background:rgba(255,255,255,0.07)">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Debt Detail sheet -->
+<div id="debt-sheet" class="bsheet-wrap closed" onclick="closeBsheet('debt-sheet')">
+  <div class="bsheet" onclick="event.stopPropagation()">
+    <div class="drag-pill"></div>
+    <div class="flex items-center gap-3 mb-5">
+      <div id="dd-avatar" class="w-12 h-12 rounded-full bg-indigo-800 flex items-center justify-center text-indigo-200 font-bold text-base flex-shrink-0"></div>
+      <div class="flex-1">
+        <p id="dd-name" class="text-white font-bold text-base"></p>
+        <p id="dd-notes" class="text-gray-500 text-xs mt-0.5"></p>
+      </div>
+      <p id="dd-amount" class="text-emerald-400 font-bold text-xl"></p>
+    </div>
+    <div class="glass rounded-2xl p-4 mb-5">
+      <p class="text-gray-500 text-xs mb-2">Các khoản chưa thu</p>
+      <div id="dd-items" class="space-y-2"></div>
+    </div>
+    <button onclick="closeBsheet('debt-sheet')" class="btn" style="background:rgba(255,255,255,0.07);padding:13px">Đóng</button>
+  </div>
+</div>
+
+<!-- Paid confirmation sheet -->
+<div id="paid-sheet" class="bsheet-wrap closed" onclick="closeBsheet('paid-sheet')">
+  <div class="bsheet" onclick="event.stopPropagation()">
+    <div class="drag-pill"></div>
+    <p class="text-white font-bold text-lg mb-1">Xác nhận đã trả</p>
+    <p id="paid-desc" class="text-gray-400 text-sm mb-6"></p>
+    <button id="paid-confirm-btn" class="btn grad-btn-green mb-3" style="padding:14px">✓ Xác nhận đã trả</button>
+    <button onclick="closeBsheet('paid-sheet')" class="btn" style="background:rgba(255,255,255,0.07);padding:13px;color:#9ca3af">Hủy</button>
+  </div>
+</div>
+
+<!-- =========== SCRIPT =========== -->
+<script>
+let currentScreen = 'setup';
+let prevScreen = 'home';
+let amt0 = '', amt1 = '', amt2 = '';
+let currentPaidRowId = '';
+
+// ===== NAVIGATION =====
+function go(name) {
+  const screens = ['home','add','debts','stats'];
+  screens.forEach(s => {
+    const el = document.getElementById('s-' + s);
+    if (s === name) { el.classList.remove('hidden'); el.classList.add('active'); }
+    else { el.classList.add('hidden'); el.classList.remove('active'); }
+  });
+  currentScreen = name;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+}
+
+function showAdd(tabIdx) {
+  prevScreen = currentScreen;
+  go('add');
+  document.getElementById('nav').classList.add('hidden');
+  switchTab(tabIdx);
+}
+
+function goBack() {
+  go(prevScreen || 'home');
+  document.getElementById('nav').classList.remove('hidden');
+}
+
+// ===== SETUP =====
+function doSetup() {
+  const url = document.getElementById('setup-url').value.trim();
+  if (!url || !url.startsWith('http')) {
+    showToast('URL không hợp lệ', 'err'); return;
+  }
+  skipSetup();
+}
+
+function skipSetup() {
+  document.getElementById('s-setup').classList.add('hidden');
+  document.getElementById('s-setup').classList.remove('active');
+  document.getElementById('nav').classList.remove('hidden');
+  go('home');
+  document.getElementById('nav-home').classList.add('active');
+}
+
+// ===== MONTH SELECTOR =====
+function selectMonth(el, month) {
+  document.querySelectorAll('.mchip').forEach(c => { c.classList.remove('active'); c.classList.add('inactive'); });
+  el.classList.add('active'); el.classList.remove('inactive');
+}
+
+// ===== NUMPAD =====
+function updateDisp(id, fmtId, val) {
+  const n = parseInt(val || '0');
+  document.getElementById(id).textContent = fmt(n);
+  if (fmtId) document.getElementById(fmtId).textContent = n > 0 ? fmt(n) + ' đồng' : '';
+}
+
+function numpadInput(current, key) {
+  if (key === 'del') return current.length > 1 ? current.slice(0,-1) : '0';
+  if (current === '0') return key === '0' || key === '000' ? '0' : key;
+  const next = current + key;
+  return next.length > 11 ? current : next;
+}
+
+function nk(k)  { amt0 = numpadInput(amt0 || '0', k); updateDisp('disp0','disp0-fmt', amt0); }
+function nk1(k) { amt1 = numpadInput(amt1 || '0', k); updateDisp('disp1', null, amt1); calcSplit(); }
+function nk2(k) {
+  amt2 = numpadInput(amt2 || '0', k); updateDisp('disp2', null, amt2);
+  // Cập nhật preview nếu đã chọn người
+  const selected = document.querySelector('#chips2 .chip-on');
+  if (selected) selectPerson2(selected);
+}
+
+// ===== TABS =====
+function switchTab(idx) {
+  [0,1,2].forEach(i => {
+    document.getElementById('tpanel' + i).classList.toggle('hidden', i !== idx);
+    const p = document.getElementById('tp' + i);
+    p.classList.toggle('on', i === idx);
+    p.classList.toggle('off', i !== idx);
+  });
+}
+
+// ===== HANG MUC DATA =====
+const HM_CA_NHAN = [
+  {icon:'🍜', name:'Tiền ăn'},
+  {icon:'🏠', name:'Tiền trọ/ điện nước'},
+  {icon:'⛽', name:'Đi lại, đổ xăng'},
+  {icon:'☕', name:'Giải trí, cf, bạn bè'},
+  {icon:'🛍️', name:'Mua sắm, đồ dùng'},
+  {icon:'💊', name:'Ốm đau, y tế'},
+  {icon:'💪', name:'Gym, thể thao, TPBS'},
+  {icon:'🎊', name:'Quan hệ xã hội'},
+  {icon:'📚', name:'Học tập/ Phát triển'},
+  {icon:'💳', name:'Trả nợ'},
+  {icon:'🏡', name:'Gửi về'},
+  {icon:'📈', name:'Dòng tiền đầu tư'},
+];
+const HM_CHO_MUON = [
+  {icon:'🍚', name:'Cơm nước'},
+  {icon:'🏢', name:'Cty'},
+  {icon:'📢', name:'Marketing'},
+  {icon:'⚽', name:'Thể thao'},
+  {icon:'📦', name:'Khác'},
+];
+
+function renderHangMuc(containerId, list) {
+  document.getElementById(containerId).innerHTML = list.map(h =>
+    `<span class="chip chip-off hm-chip" onclick="selectHangMuc(this,'${containerId}')">${h.icon} ${h.name}</span>`
+  ).join('');
+}
+
+function selectHangMuc(el, containerId) {
+  document.querySelectorAll(`#${containerId} .hm-chip`).forEach(c => {
+    c.classList.remove('chip-on'); c.classList.add('chip-off');
+  });
+  el.classList.add('chip-on'); el.classList.remove('chip-off');
+}
+
+// ===== CHIPS =====
+// Multi-select (chia bill)
+function toggleChip(el, recalc) {
+  if (el.style.cursor === 'default') return; // Khoa cố định
+  const on = el.classList.contains('chip-on');
+  el.classList.toggle('chip-on', !on);
+  el.classList.toggle('chip-off', on);
+  if (recalc) calcSplit();
+}
+
+// Single-select — Ghi nhanh
+function selectPerson0(el) {
+  document.querySelectorAll('#chips0 .chip').forEach(c => {
+    c.classList.remove('chip-on'); c.classList.add('chip-off');
+  });
+  el.classList.add('chip-on'); el.classList.remove('chip-off');
+
+  const isKhoa = el.textContent.trim() === 'Khoa';
+  const badge = document.getElementById('phanloai0-badge');
+  const hint  = badge.nextElementSibling;
+  if (isKhoa) {
+    badge.textContent = 'Cá nhân';
+    badge.style.cssText = 'background:rgba(99,102,241,0.2);color:#a5b4fc';
+    hint.textContent = '→ Đã thu tự động ✓';
+    hint.className = 'text-gray-600 text-xs';
+    renderHangMuc('hangmuc0', HM_CA_NHAN);
+  } else {
+    badge.textContent = 'Cho mượn/ Ứng';
+    badge.style.cssText = 'background:rgba(16,185,129,0.15);color:#6ee7b7';
+    hint.textContent = '→ Đã thu cần tick tay sau';
+    hint.className = 'text-amber-600 text-xs';
+    renderHangMuc('hangmuc0', HM_CHO_MUON);
+  }
+}
+
+// Single-select — Được trả hộ
+function selectPerson2(el) {
+  document.querySelectorAll('#chips2 .chip').forEach(c => {
+    c.classList.remove('chip-on'); c.classList.add('chip-off');
+  });
+  el.classList.add('chip-on'); el.classList.remove('chip-off');
+
+  const name = el.textContent.trim();
+  const total = parseInt(amt2 || '0');
+  const half = Math.ceil(total / 2);
+
+  document.getElementById('dctra-preview').classList.remove('hidden');
+  document.getElementById('dctra-payer-name').textContent = name;
+  document.getElementById('dctra-khoa-amt').textContent = '+' + fmt(half) + 'đ';
+  document.getElementById('dctra-payer-amt').textContent = '-' + fmt(total - half) + 'đ';
+}
+
+// ===== SPLIT CALC =====
+function calcSplit() {
+  const total = parseInt(amt1 || '0');
+  const count = document.querySelectorAll('#split-chips .chip-on').length;
+  const el = document.getElementById('split-info');
+  if (!total || !count) { el.innerHTML = '<p class="text-indigo-400 text-sm font-semibold">Chọn người để tính</p>'; return; }
+  const per = Math.ceil(total / count);
+  el.innerHTML = `<p class="text-indigo-400 text-sm font-semibold">${count} người · mỗi người <span class="text-white font-bold">${fmt(per)}đ</span></p>`;
+}
+
+// ===== SUBMIT =====
+function submitEntry() {
+  goBack();
+  setTimeout(() => showToast('Đã ghi thành công ✓', 'ok'), 200);
+  amt0 = amt1 = amt2 = '0';
+  ['disp0','disp1','disp2'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
+  const f = document.getElementById('disp0-fmt'); if (f) f.textContent = '';
+}
+
+// ===== TOAST =====
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type === 'ok' ? 'toast-ok' : 'toast-err'}`;
+  t.classList.add('show'); t.classList.remove('hide');
+  setTimeout(() => { t.classList.add('hide'); t.classList.remove('show'); }, 2500);
+}
+
+// ===== BOTTOM SHEETS =====
+function openBsheet(id) {
+  const w = document.getElementById(id);
+  w.classList.remove('closed');
+  w.classList.add('open');
+  setTimeout(() => { w.style.background = 'rgba(0,0,0,0.65)'; }, 10);
+}
+
+function closeBsheet(id) {
+  const w = document.getElementById(id);
+  w.classList.remove('open');
+  w.classList.add('closed');
+  w.style.background = '';
+}
+
+// ===== TX DETAIL =====
+function openTxDetail(tx) {
+  document.getElementById('tx-avatar').textContent = tx.name[0].toUpperCase();
+  document.getElementById('tx-detail-title').textContent = tx.detail;
+  document.getElementById('tx-detail-sub').textContent = tx.name + ' · ' + tx.cat;
+  document.getElementById('tx-detail-amt').textContent = (tx.amount >= 0 ? '+' : '') + fmt(tx.amount) + 'đ';
+  document.getElementById('tx-detail-amt').className = 'ml-auto font-bold text-lg ' + (tx.amount < 0 ? 'text-emerald-400' : 'text-red-400');
+  document.getElementById('tx-date').textContent = tx.date;
+  document.getElementById('tx-type').textContent = tx.type;
+  document.getElementById('tx-cat').textContent = tx.cat;
+  const statusEl = document.getElementById('tx-status');
+  const collectBtn = document.getElementById('tx-collect-btn');
+  if (tx.collected) {
+    statusEl.textContent = 'Đã thu ✓'; statusEl.className = 'text-sm font-semibold text-emerald-400';
+    collectBtn.style.display = 'none';
+  } else if (tx.type === 'Cho mượn/ Ứng' && tx.amount > 0) {
+    statusEl.textContent = 'Chưa thu'; statusEl.className = 'text-sm font-semibold text-amber-400';
+    collectBtn.style.display = '';
+  } else {
+    statusEl.textContent = '—'; statusEl.className = 'text-sm font-semibold text-gray-500';
+    collectBtn.style.display = 'none';
+  }
+  openBsheet('tx-sheet');
+}
+
+function markCollected() {
+  closeBsheet('tx-sheet');
+  setTimeout(() => showToast('Đã đánh dấu thu xong ✓', 'ok'), 200);
+}
+
+// ===== DEBT DETAIL =====
+function openDebtDetail(d) {
+  document.getElementById('dd-avatar').textContent = d.avatar;
+  document.getElementById('dd-name').textContent = d.name;
+  document.getElementById('dd-notes').textContent = d.notes;
+  document.getElementById('dd-amount').textContent = '+' + fmt(d.amount) + 'đ';
+  const items = document.getElementById('dd-items');
+  items.innerHTML = d.notes.split('·').map(n => `
+    <div class="flex justify-between items-center">
+      <span class="text-gray-300 text-sm">${n.trim()}</span>
+      <span class="text-white text-sm font-semibold">${fmt(Math.floor(d.amount / d.notes.split('·').length))}đ</span>
+    </div>`).join('');
+  openBsheet('debt-sheet');
+}
+
+// ===== PAID SHEET =====
+function showPaidSheet(name, amount, rowId) {
+  currentPaidRowId = rowId;
+  document.getElementById('paid-desc').textContent = `Xác nhận ông đã trả ${amount} cho ${name}?`;
+  document.getElementById('paid-confirm-btn').onclick = () => confirmPaid(rowId);
+  openBsheet('paid-sheet');
+}
+
+function confirmPaid(rowId) {
+  closeBsheet('paid-sheet');
+  const row = document.getElementById(rowId);
+  if (row) {
+    row.style.transition = 'all .4s';
+    row.style.opacity = '0';
+    row.style.transform = 'translateX(30px)';
+    setTimeout(() => {
+      row.remove();
+      const settled = document.getElementById('settled-list');
+      settled.classList.remove('opacity-40');
+      settled.innerHTML += `<div class="flex items-center gap-3 p-4 border-t" style="border-color:rgba(255,255,255,0.05)"><div class="w-11 h-11 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 font-bold text-sm">${rowId === 'debt-ky' ? 'K' : 'T'}</div><div class="flex-1"><p class="text-gray-500 text-sm font-semibold line-through">${rowId === 'debt-ky' ? 'C. Kỳ' : 'Trí'}</p><p class="text-gray-600 text-xs">Thanh toán hôm nay</p></div><svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>`;
+      settled.classList.add('opacity-40');
+      showToast('Đã ghi nhận thanh toán ✓', 'ok');
+    }, 400);
+  }
+}
+
+// ===== FORMAT =====
+function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+// ===== INIT =====
+renderHangMuc('hangmuc0', HM_CA_NHAN);   // Ghi nhanh: mặc định Khoa → Cá nhân
+renderHangMuc('hangmuc1', HM_CA_NHAN);   // Chia bill: hạng mục phần Khoa
+renderHangMuc('hangmuc2', HM_CA_NHAN);   // Được trả hộ: hạng mục phần Khoa
+</script>
+</body>
+</html>

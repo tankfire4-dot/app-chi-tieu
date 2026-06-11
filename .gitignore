@@ -1,0 +1,11 @@
+# Claude Code
+.claude/
+
+# Dev tools
+pwa/generate-icon.html
+
+# Flutter build artifacts
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
