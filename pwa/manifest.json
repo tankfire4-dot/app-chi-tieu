@@ -2,7 +2,7 @@
   "name": "Chi Tiêu",
   "short_name": "Chi Tiêu",
   "description": "Quản lý chi tiêu cá nhân",
-  "start_url": "/",
+  "start_url": "/app-chi-tieu/",
   "display": "standalone",
   "background_color": "#0B0D17",
   "theme_color": "#0B0D17",

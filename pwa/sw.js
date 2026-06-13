@@ -1,5 +1,5 @@
-const CACHE = 'chi-tieu-v1';
-const ASSETS = ['/', '/index.html'];
+const CACHE = 'chi-tieu-v3';
+const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
