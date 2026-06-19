@@ -14,33 +14,34 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Be Vietnam Pro',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0B0D17;color:white;overflow:hidden;height:100dvh}
+    body{font-family:'Plus Jakarta Sans','Be Vietnam Pro',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0B0D17;color:white;overflow:hidden;height:100dvh}
     ::-webkit-scrollbar{display:none}
     .glass{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.10)}
     .glass-md{background:rgba(255,255,255,0.11);border:1px solid rgba(255,255,255,0.13)}
-    .grad-purple{background:linear-gradient(140deg,#23206b 0%,#4338ca 52%,#6d5ef0 100%)}
+    .grad-purple{background:linear-gradient(140deg,#6D4AFF 0%,#8A5BFF 55%,#A468FF 100%)}
     .grad-green{background:linear-gradient(135deg,#064e3b,#065f46,#047857)}
-    .grad-btn{background:linear-gradient(135deg,#6d5ef0,#4f46e5);box-shadow:0 12px 24px -8px rgba(109,94,240,0.5)}
-    .grad-btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 12px 24px -8px rgba(124,58,237,0.5)}
-    .grad-btn-green{background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 12px 24px -8px rgba(5,150,105,0.45)}
+    .grad-btn{background:linear-gradient(135deg,#6D4AFF,#A06BFF);box-shadow:0 12px 24px -8px rgba(109,74,255,0.55)}
+    .grad-btn-purple{background:linear-gradient(135deg,#F77E9A,#FB6B7C);box-shadow:0 12px 24px -8px rgba(251,107,124,0.45)}
+    .grad-btn-green{background:linear-gradient(135deg,#1FBF8A,#2FD49B);box-shadow:0 12px 24px -8px rgba(47,212,155,0.45)}
     .screen{position:fixed;inset:0;overflow-y:auto;background:#0B0D17}
     .screen.hidden{display:none}
     .screen.active{display:block;animation:screenIn .18s ease both}
     @keyframes screenIn{from{opacity:0}to{opacity:1}}
     .ni{color:#6b7280;transition:color .2s}
     .nav-item{background:transparent;border:none;cursor:pointer}
-    .nav-item.active .ni{color:#a99bf9}
+    .nav-item.active .ni{color:#A48BFF}
     .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none}
-    .chip-on{background:#6d5ef0;color:white}
+    .chip-on{background:#6D4AFF;color:white}
     .chip-off{background:rgba(255,255,255,0.07);color:#9ca3af;border:1px solid rgba(255,255,255,0.1)}
     .inp{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;color:white;font-size:15px;width:100%;transition:border .2s;font-family:inherit}
     .inp:focus{outline:none;border-color:#6366f1;background:rgba(99,102,241,0.08)}
     .inp::placeholder{color:#4b5563}
     .tpill{flex:1;padding:8px 4px;font-size:12px;font-weight:600;border-radius:10px;text-align:center;transition:all .2s;cursor:pointer;line-height:1.3}
     .tpill .tsub{font-size:9px;font-weight:400;opacity:.65;display:block;margin-top:1px}
-    .tpill.on{background:linear-gradient(135deg,#6d5ef0,#4f46e5);color:white;box-shadow:0 6px 14px -6px rgba(109,94,240,.7)}
+    .tpill.on{background:linear-gradient(135deg,#6D4AFF,#8A5BFF);color:white;box-shadow:0 6px 14px -6px rgba(109,74,255,.7)}
     .tpill.off{color:#6b7280}
     .prog-bg{background:rgba(255,255,255,0.08);border-radius:99px;height:5px}
     .prog-fill{height:5px;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
@@ -53,9 +54,12 @@
     .nk:active{background:rgba(255,255,255,0.18);transform:scale(0.93)}
     .nk.del{background:rgba(99,102,241,0.15);color:#818cf8}
     .nk.z3{background:rgba(255,255,255,0.04);color:#9ca3af;font-size:15px}
-    .nk.op{background:rgba(99,102,241,0.15);color:#a99bf9;font-size:1.3rem}
-    .nk.op:active{background:rgba(99,102,241,0.28)}
-    .nk.op.eq{background:linear-gradient(135deg,#6d5ef0,#4f46e5);color:#fff}
+    .nk.op{background:rgba(109,74,255,0.15);color:#A48BFF;font-size:1.3rem}
+    .nk.op:active{background:rgba(109,74,255,0.28)}
+    .nk.op.eq{background:linear-gradient(135deg,#6D4AFF,#8A5BFF);color:#fff}
+    .text-expense{color:#FB6B7C}
+    .text-income{color:#2FD49B}
+    .text-accent{color:#A48BFF}
     .btn{width:100%;padding:16px;border-radius:18px;font-weight:700;font-size:15px;color:white;transition:transform .1s,opacity .1s;cursor:pointer;border:none;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
     .btn:active{transform:scale(0.97);opacity:.88}
     .btn:disabled{opacity:.5;pointer-events:none}
@@ -209,33 +213,46 @@
         <span class="text-xs font-bold px-3 py-1.5 rounded-full" style="background:rgba(255,255,255,0.16);color:#fff">Đối soát</span>
       </div>
       <p class="text-white font-extrabold mb-3" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---đ</p>
-      <div class="flex rounded-full overflow-hidden mb-2" style="height:9px;background:rgba(255,255,255,0.18)">
-        <div id="bar-avail" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
-        <div id="bar-other" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+      <!-- hidden anchors — renderBalance() writes here, elements must exist -->
+      <div style="display:none">
+        <div id="bar-avail"></div><div id="bar-other"></div>
+        <span id="leg-avail"></span><span id="leg-dot"></span><span id="leg-debt"></span>
+        <span id="card-real"></span>
       </div>
-      <div style="font-size:12px;color:#c7d2fe">
-        <div class="flex justify-between items-center" style="margin-bottom:4px">
-          <span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:3px;background:#c7d2fe;flex-shrink:0"></span>Khả dụng</span>
-          <span id="leg-avail" style="font-weight:600;color:#fff">---</span>
+      <!-- 2 mini-cards -->
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;background:rgba(255,255,255,0.16);border-radius:16px;padding:11px 14px;backdrop-filter:blur(8px);">
+          <div style="font-size:11px;color:rgba(255,255,255,0.78);margin-bottom:3px;">Họ nợ bạn</div>
+          <div id="card-lend" style="font-size:14px;font-weight:700;color:#fff;">---</div>
         </div>
-        <div class="flex justify-between items-center">
-          <span class="flex items-center gap-2"><span id="leg-dot" style="width:9px;height:9px;border-radius:3px;background:#34d399;flex-shrink:0"></span>Công nợ</span>
-          <span id="leg-debt" style="font-weight:600">---</span>
+        <div style="flex:1;background:rgba(255,255,255,0.16);border-radius:16px;padding:11px 14px;backdrop-filter:blur(8px);">
+          <div style="font-size:11px;color:rgba(255,255,255,0.78);margin-bottom:3px;">Thực chi tháng này</div>
+          <div id="card-spend" style="font-size:14px;font-weight:700;color:#fff;">---</div>
         </div>
-      </div>
-      <div class="flex justify-between items-center" style="border-top:1px solid rgba(255,255,255,0.16);margin-top:11px;padding-top:9px">
-        <span class="text-sm" style="color:#c7d2fe">Tài sản thực</span>
-        <span id="card-real" class="font-extrabold text-sm" style="color:#fff">---</span>
       </div>
     </div>
   </div>
 
   <!-- Quick actions -->
-  <div class="px-4 mb-6">
-    <button onclick="showAdd(0)" class="w-full rounded-2xl flex items-center justify-center gap-3" style="padding:17px;border:none;cursor:pointer;background:linear-gradient(135deg,#6d5ef0,#4f46e5);box-shadow:0 12px 24px -8px rgba(109,94,240,0.65)">
-      <svg class="w-5 h-5" fill="none" stroke="#fff" stroke-width="2.6" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="text-sm font-extrabold" style="color:#fff">Ghi chi tiêu</span>
-    </button>
+  <div style="display:flex;gap:11px;padding:0 16px 24px;">
+    <div onclick="showAdd(0)" style="flex:1;background:#16161E;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#6D4AFF,#A06BFF);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:#D4D4E0;">Ghi nhanh</span>
+    </div>
+    <div onclick="showAdd(1)" style="flex:1;background:#16161E;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#F77E9A,#FB6B7C);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:#D4D4E0;">Chia bill</span>
+    </div>
+    <div onclick="showAdd(0)" style="flex:1;background:#16161E;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#1FBF8A,#2FD49B);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:#D4D4E0;">Được trả</span>
+    </div>
   </div>
 
 
@@ -346,7 +363,7 @@
     <h2 class="text-white font-bold text-xl">Công nợ</h2>
     <p id="debt-updated" class="text-gray-500 text-xs mt-0.5">Đang tải...</p>
   </div>
-  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(135deg,#16213e,#1c3a2e);border:1px solid rgba(52,211,153,.18)">
+  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(140deg,#101A2E,#15243F);border:1px solid rgba(47,212,155,0.18)">
     <div class="relative">
       <p id="debt-net-label" class="text-gray-400 text-xs uppercase tracking-widest mb-1">Tổng công nợ</p>
       <p id="debt-net" class="text-3xl font-extrabold text-emerald-400 mb-1">---</p>
@@ -735,17 +752,17 @@ function renderRows() {
       const ci = r.name.length % AVATAR_COLORS.length;
       const avatarCls = isIncome ? 'bg-emerald-900 text-emerald-300' : AVATAR_COLORS[ci];
       const isChoMuon = r.category === 'Cho mượn/ Ứng';
-      const amtColor = (isIncome || (isChoMuon && r.amount > 0)) ? 'text-emerald-400' : 'text-red-400';
+      const amtColor = (isIncome || (isChoMuon && r.amount > 0)) ? '#2FD49B' : '#FB6B7C';
       const amtSign  = (isIncome || (isChoMuon && r.amount > 0)) ? '+' : (isChoMuon && r.amount < 0 ? '-' : '');
       const collIcon = (r.category==='Cho mượn/ Ứng' && !r.collected && r.amount>0)
-        ? '<span class="text-amber-500 text-xs ml-1">●</span>' : '';
+        ? '<span style="color:#f59e0b;font-size:12px;margin-left:4px;">●</span>' : '';
       html += `<div class="tx-row" onclick='openTxDetail(${JSON.stringify(r)})'>
-        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${avatarCls}">${initial}</div>
+        <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:#A48BFF;">${initial}</div>
         <div class="flex-1 min-w-0">
           <p class="text-white text-sm font-semibold truncate">${r.detail||'(trống)'}</p>
-          <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span class="${isIncome?'text-emerald-400':'text-indigo-400'}">${r.subcategory||r.category}</span></p>
+          <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${r.subcategory||r.category}</span></p>
         </div>
-        <p class="${amtColor} font-bold text-sm flex-shrink-0">${amtSign}${fmt(Math.abs(r.amount))}đ</p>
+        <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}đ</p>
       </div>`;
     });
     html += `</div>`;
