@@ -9,8 +9,13 @@ New-Item $TMP -ItemType Directory | Out-Null
 
 Copy-Item "$PSScriptRoot\pwa\*" $TMP -Recurse
 
+$GIT_NAME  = git -C $PSScriptRoot config user.name
+$GIT_EMAIL = git -C $PSScriptRoot config user.email
+
 Set-Location $TMP
 git init -q
+git config user.name  $GIT_NAME
+git config user.email $GIT_EMAIL
 git remote add origin $REPO
 git checkout -b gh-pages
 git add -A

@@ -11,42 +11,51 @@
   <link rel="manifest" href="manifest.json"/>
   <link rel="apple-touch-icon" href="icon-192.png"/>
   <title>Chi Tiêu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
     *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0B0D17;color:white;overflow:hidden;height:100dvh}
+    body{font-family:'Be Vietnam Pro',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0B0D17;color:white;overflow:hidden;height:100dvh}
     ::-webkit-scrollbar{display:none}
     .glass{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.10)}
     .glass-md{background:rgba(255,255,255,0.11);border:1px solid rgba(255,255,255,0.13)}
-    .grad-purple{background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca)}
+    .grad-purple{background:linear-gradient(140deg,#23206b 0%,#4338ca 52%,#6d5ef0 100%)}
     .grad-green{background:linear-gradient(135deg,#064e3b,#065f46,#047857)}
-    .grad-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
-    .grad-btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7)}
-    .grad-btn-green{background:linear-gradient(135deg,#059669,#10b981)}
+    .grad-btn{background:linear-gradient(135deg,#6d5ef0,#4f46e5);box-shadow:0 12px 24px -8px rgba(109,94,240,0.5)}
+    .grad-btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 12px 24px -8px rgba(124,58,237,0.5)}
+    .grad-btn-green{background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 12px 24px -8px rgba(5,150,105,0.45)}
     .screen{position:fixed;inset:0;overflow-y:auto;background:#0B0D17}
     .screen.hidden{display:none}
     .screen.active{display:block;animation:screenIn .18s ease both}
     @keyframes screenIn{from{opacity:0}to{opacity:1}}
-    .ni{color:#374151;transition:color .2s}
-    .nav-item.active .ni{color:#818cf8}
+    .ni{color:#6b7280;transition:color .2s}
+    .nav-item{background:transparent;border:none;cursor:pointer}
+    .nav-item.active .ni{color:#a99bf9}
     .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none}
-    .chip-on{background:#4f46e5;color:white}
+    .chip-on{background:#6d5ef0;color:white}
     .chip-off{background:rgba(255,255,255,0.07);color:#9ca3af;border:1px solid rgba(255,255,255,0.1)}
     .inp{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;color:white;font-size:15px;width:100%;transition:border .2s;font-family:inherit}
     .inp:focus{outline:none;border-color:#6366f1;background:rgba(99,102,241,0.08)}
     .inp::placeholder{color:#4b5563}
     .tpill{flex:1;padding:8px 4px;font-size:12px;font-weight:600;border-radius:10px;text-align:center;transition:all .2s;cursor:pointer;line-height:1.3}
     .tpill .tsub{font-size:9px;font-weight:400;opacity:.65;display:block;margin-top:1px}
-    .tpill.on{background:#4f46e5;color:white}
+    .tpill.on{background:linear-gradient(135deg,#6d5ef0,#4f46e5);color:white;box-shadow:0 6px 14px -6px rgba(109,94,240,.7)}
     .tpill.off{color:#6b7280}
     .prog-bg{background:rgba(255,255,255,0.08);border-radius:99px;height:5px}
     .prog-fill{height:5px;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
+    .emoji-opt{font-size:1.4rem;padding:4px 2px;border-radius:8px;cursor:pointer;background:transparent;border:none;line-height:1;transition:background .12s}
+    .emoji-opt:hover{background:rgba(255,255,255,0.08)}
     .tx-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer}
     .tx-row:last-child{border-bottom:none}
     .tx-row:active{background:rgba(255,255,255,0.03);margin:0 -16px;padding:12px 16px}
-    .nk{display:flex;align-items:center;justify-content:center;height:56px;border-radius:16px;font-size:20px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.07);color:white;transition:all .1s;user-select:none}
+    .nk{display:flex;align-items:center;justify-content:center;height:56px;border-radius:16px;font-size:20px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.07);color:white;transition:all .1s;user-select:none;border:none}
     .nk:active{background:rgba(255,255,255,0.18);transform:scale(0.93)}
     .nk.del{background:rgba(99,102,241,0.15);color:#818cf8}
     .nk.z3{background:rgba(255,255,255,0.04);color:#9ca3af;font-size:15px}
+    .nk.op{background:rgba(99,102,241,0.15);color:#a99bf9;font-size:1.3rem}
+    .nk.op:active{background:rgba(99,102,241,0.28)}
+    .nk.op.eq{background:linear-gradient(135deg,#6d5ef0,#4f46e5);color:#fff}
     .btn{width:100%;padding:16px;border-radius:18px;font-weight:700;font-size:15px;color:white;transition:transform .1s,opacity .1s;cursor:pointer;border:none;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
     .btn:active{transform:scale(0.97);opacity:.88}
     .btn:disabled{opacity:.5;pointer-events:none}
@@ -61,9 +70,6 @@
     .bsheet-wrap.open .bsheet{transform:translateY(0)}
     .drag-pill{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:99px;margin:0 auto 20px}
     .badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;display:inline-block}
-    .mchip{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
-    .mchip.active{background:#4f46e5;color:white}
-    .mchip.inactive{color:#6b7280}
     .skel{background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);background-size:200% 100%;animation:skel 1.5s infinite;border-radius:10px}
     @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .spin{animation:spin .8s linear infinite;display:inline-block}
@@ -75,7 +81,7 @@
     .bar{width:22px;border-radius:6px 6px 3px 3px;min-height:4px;transition:height .6s cubic-bezier(.16,1,.3,1)}
     select option{background:#1a1d2e;color:white}
     .flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.flex-wrap{flex-wrap:wrap}
-    .grid{display:grid}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid{display:grid}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
     .inline-block{display:inline-block}.hidden{display:none}
     .fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}
     .inset-0{inset:0}.top-0{top:0}.-top-8{top:-32px}.-top-10{top:-40px}.bottom-0{bottom:0}.-bottom-14{bottom:-56px}
@@ -129,6 +135,9 @@
     .rounded-xl{border-radius:12px}.rounded-2xl{border-radius:16px}.rounded-3xl{border-radius:24px}.rounded-full{border-radius:9999px}
     .-translate-x-1\/2{transform:translateX(-50%)}
     .focus\:outline-none:focus{outline:none}
+    .btn.grad-btn,.btn.grad-btn-purple{color:#fff}
+    .btn.grad-btn-green{color:#fff}
+    #card-total,#debt-net,#d0,#d1{font-variant-numeric:tabular-nums}
   </style>
 </head>
 <body>
@@ -136,19 +145,19 @@
 <!-- Splash screen -->
 <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0B0D17 0%,#13152a 50%,#1a0f35 100%);transition:opacity .35s ease">
   <div style="animation:splashIn .5s cubic-bezier(.22,1,.36,1) both">
-    <div style="width:100px;height:100px;border-radius:28px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 24px 64px rgba(99,102,241,0.45)">
-      <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <div style="width:88px;height:88px;border-radius:24px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 24px 56px rgba(99,102,241,0.4)">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="5" width="20" height="14" rx="2"/>
         <path d="M2 10h20"/>
-        <circle cx="16" cy="15" r="1" fill="white" stroke="none"/>
+        <circle cx="16" cy="15" r="1" fill="#fff" stroke="none"/>
       </svg>
     </div>
-    <p style="color:#fff;font-size:30px;font-weight:800;letter-spacing:-0.5px;text-align:center;margin:0 0 6px">Chi Tiêu</p>
-    <p style="color:rgba(255,255,255,0.35);font-size:13px;text-align:center;margin:0 0 44px">Quản lý tài chính cá nhân</p>
-    <div style="display:flex;gap:7px;justify-content:center">
-      <div style="width:7px;height:7px;border-radius:50%;background:#6366f1;animation:splashDot 1.3s ease-in-out infinite"></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:#6366f1;animation:splashDot 1.3s ease-in-out .22s infinite"></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:#6366f1;animation:splashDot 1.3s ease-in-out .44s infinite"></div>
+    <p style="color:#fff;font-size:28px;font-weight:800;letter-spacing:-0.5px;text-align:center;margin:0 0 6px;font-family:'Be Vietnam Pro',sans-serif">Chi Tiêu</p>
+    <p style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center;margin:0 0 48px;font-family:'Be Vietnam Pro',sans-serif">Quản lý tài chính cá nhân</p>
+    <div style="display:flex;gap:6px;justify-content:center">
+      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out infinite"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out .22s infinite"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out .44s infinite"></div>
     </div>
   </div>
 </div>
@@ -158,7 +167,9 @@
 <!-- ===== SETUP ===== -->
 <div id="s-setup" class="screen active" style="display:flex;flex-direction:column;justify-content:center;padding:32px 24px">
   <div class="text-center mb-10">
-    <div class="w-20 h-20 rounded-3xl grad-btn flex items-center justify-center mx-auto mb-5" style="font-size:36px">💸</div>
+    <div class="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-5" style="background:#6D5FD4">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="15" r="1" fill="#fff" stroke="none"/></svg>
+    </div>
     <h1 class="text-2xl font-extrabold text-white mb-2">Chi Tiêu</h1>
     <p class="text-gray-400 text-sm leading-relaxed">Nhập URL Google Apps Script<br/>để kết nối với dữ liệu của bạn</p>
   </div>
@@ -188,43 +199,42 @@
     </div>
   </div>
 
-  <!-- Month tabs -->
-  <div class="flex gap-2 px-5 mb-3 overflow-x-auto" style="scrollbar-width:none">
-    <span id="mchip-prev2" class="mchip inactive" onclick="selectMonth(-2,this)"></span>
-    <span id="mchip-prev1" class="mchip inactive" onclick="selectMonth(-1,this)"></span>
-    <span id="mchip-cur"   class="mchip active"   onclick="selectMonth(0,this)"></span>
-  </div>
-
   <!-- Balance card (bấm để đối soát) -->
-  <div class="mx-4 rounded-3xl p-6 grad-purple relative overflow-hidden mb-5" onclick="openReconcile()" style="cursor:pointer">
-    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
-    <div class="absolute -bottom-14 -left-6 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.04)"></div>
+  <div class="mx-4 rounded-3xl grad-purple relative overflow-hidden mb-5" onclick="openReconcile()" style="cursor:pointer;padding:24px 22px;box-shadow:0 20px 40px -16px rgba(79,70,229,0.55)">
+    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full" style="background:rgba(255,255,255,0.07)"></div>
+    <div class="absolute -bottom-14 -left-6 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
     <div class="relative">
       <div class="flex justify-between items-center mb-1">
-        <p class="text-indigo-300 text-xs font-medium uppercase tracking-widest">💰 Số dư hiện tại</p>
-        <span class="text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-full" style="background:rgba(255,255,255,0.1)">🔍 Đối soát</span>
+        <p class="text-xs font-bold uppercase tracking-widest" style="color:#c7d2fe;letter-spacing:0.08em">Số dư khả dụng</p>
+        <span class="text-xs font-bold px-3 py-1.5 rounded-full" style="background:rgba(255,255,255,0.16);color:#fff">Đối soát</span>
       </div>
-      <p class="text-white font-black mb-4" id="card-total" style="font-size:2.6rem;letter-spacing:-1px">---.---đ</p>
-      <div class="flex gap-3">
-        <div class="glass rounded-2xl px-4 py-2.5 flex-1">
-          <p class="text-indigo-300 text-xs mb-0.5" id="card-month-label">Thực chi Th--</p>
-          <p class="text-white font-bold text-sm" id="card-expense">---</p>
+      <p class="text-white font-extrabold mb-3" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---đ</p>
+      <div class="flex rounded-full overflow-hidden mb-2" style="height:9px;background:rgba(255,255,255,0.18)">
+        <div id="bar-avail" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+        <div id="bar-other" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+      </div>
+      <div style="font-size:12px;color:#c7d2fe">
+        <div class="flex justify-between items-center" style="margin-bottom:4px">
+          <span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:3px;background:#c7d2fe;flex-shrink:0"></span>Khả dụng</span>
+          <span id="leg-avail" style="font-weight:600;color:#fff">---</span>
         </div>
-        <div class="glass rounded-2xl px-4 py-2.5 flex-1">
-          <p class="text-green-300 text-xs mb-0.5">Đang cho mượn</p>
-          <p class="text-white font-bold text-sm" id="card-lend">---</p>
+        <div class="flex justify-between items-center">
+          <span class="flex items-center gap-2"><span id="leg-dot" style="width:9px;height:9px;border-radius:3px;background:#34d399;flex-shrink:0"></span>Công nợ</span>
+          <span id="leg-debt" style="font-weight:600">---</span>
         </div>
+      </div>
+      <div class="flex justify-between items-center" style="border-top:1px solid rgba(255,255,255,0.16);margin-top:11px;padding-top:9px">
+        <span class="text-sm" style="color:#c7d2fe">Tài sản thực</span>
+        <span id="card-real" class="font-extrabold text-sm" style="color:#fff">---</span>
       </div>
     </div>
   </div>
 
   <!-- Quick actions -->
   <div class="px-4 mb-6">
-    <button onclick="showAdd(0)" class="glass-md w-full rounded-2xl py-4 flex items-center justify-center gap-3">
-      <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      </div>
-      <span class="text-sm font-semibold text-gray-200">Ghi chi tiêu</span>
+    <button onclick="showAdd(0)" class="w-full rounded-2xl flex items-center justify-center gap-3" style="padding:17px;border:none;cursor:pointer;background:linear-gradient(135deg,#6d5ef0,#4f46e5);box-shadow:0 12px 24px -8px rgba(109,94,240,0.65)">
+      <svg class="w-5 h-5" fill="none" stroke="#fff" stroke-width="2.6" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="text-sm font-extrabold" style="color:#fff">Ghi chi tiêu</span>
     </button>
   </div>
 
@@ -269,11 +279,11 @@
       <p id="d0" class="text-white font-black mb-1" style="font-size:3rem;letter-spacing:-2px;min-height:3.5rem;line-height:1.1">0</p>
       <p id="d0f" class="text-indigo-400 text-sm font-medium h-5"></p>
     </div>
-    <div class="grid grid-cols-3 gap-2 mb-5">
-      <div class="nk" onclick="nk(0,'1')">1</div><div class="nk" onclick="nk(0,'2')">2</div><div class="nk" onclick="nk(0,'3')">3</div>
-      <div class="nk" onclick="nk(0,'4')">4</div><div class="nk" onclick="nk(0,'5')">5</div><div class="nk" onclick="nk(0,'6')">6</div>
-      <div class="nk" onclick="nk(0,'7')">7</div><div class="nk" onclick="nk(0,'8')">8</div><div class="nk" onclick="nk(0,'9')">9</div>
-      <div class="nk z3" onclick="nk(0,'000')">000</div><div class="nk" onclick="nk(0,'0')">0</div><div class="nk del" onclick="nk(0,'del')">⌫</div>
+    <div class="grid grid-cols-4 gap-2 mb-5">
+      <div class="nk" onclick="nk(0,'1')">1</div><div class="nk" onclick="nk(0,'2')">2</div><div class="nk" onclick="nk(0,'3')">3</div><div class="nk op" onclick="nk(0,'+')">+</div>
+      <div class="nk" onclick="nk(0,'4')">4</div><div class="nk" onclick="nk(0,'5')">5</div><div class="nk" onclick="nk(0,'6')">6</div><div class="nk op" onclick="nk(0,'-')">−</div>
+      <div class="nk" onclick="nk(0,'7')">7</div><div class="nk" onclick="nk(0,'8')">8</div><div class="nk" onclick="nk(0,'9')">9</div><div class="nk op" onclick="nk(0,'*')">×</div>
+      <div class="nk z3" onclick="nk(0,'000')">000</div><div class="nk" onclick="nk(0,'0')">0</div><div class="nk del" onclick="nk(0,'del')">⌫</div><div class="nk op" onclick="nk(0,'/')">÷</div>
     </div>
     <div id="chi-only0">
       <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Người chi</p>
@@ -283,9 +293,16 @@
         <span id="pl0" class="badge" style="background:rgba(99,102,241,0.2);color:#a5b4fc">Cá nhân</span>
         <span id="pl0-hint" class="text-gray-600 text-xs">→ Đã thu tự động ✓</span>
       </div>
-      <div id="dir-toggle0" class="flex gap-1 glass rounded-2xl p-1 mb-4 hidden" style="max-width:260px">
+      <div id="dir-toggle0" class="flex gap-1 glass rounded-2xl p-1 mb-3 hidden" style="max-width:260px">
         <div id="dir-them" class="tpill on" onclick="setDir('them_owe')">💰 Họ nợ bạn</div>
         <div id="dir-me"   class="tpill off" onclick="setDir('i_owe')">🤝 Bạn nợ họ</div>
+      </div>
+      <div id="owe-mode0" class="hidden mb-4">
+        <div class="flex gap-1 glass rounded-2xl p-1" style="max-width:300px">
+          <div id="owe-fronted" class="tpill on"  onclick="setOweMode('fronted')">🍽️ Họ trả giúp</div>
+          <div id="owe-cash"    class="tpill off" onclick="setOweMode('cash')">💵 Vay tiền mặt</div>
+        </div>
+        <p id="owe-mode-hint" class="text-gray-600 text-xs mt-1.5 px-1"></p>
       </div>
     </div>
 
@@ -326,17 +343,17 @@
 <!-- ===== DEBTS ===== -->
 <div id="s-debts" class="screen hidden" style="overflow-y:auto;padding-bottom:80px">
   <div class="px-5 pt-14 pb-4">
-    <h2 class="text-white font-bold text-xl">Cbạn nợ</h2>
+    <h2 class="text-white font-bold text-xl">Công nợ</h2>
     <p id="debt-updated" class="text-gray-500 text-xs mt-0.5">Đang tải...</p>
   </div>
-  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(135deg,#1a1f3c,#2d1b4e)">
-    <div class="absolute -top-8 -right-8 w-36 h-36 rounded-full" style="background:rgba(139,92,246,0.12)"></div>
+  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(135deg,#16213e,#1c3a2e);border:1px solid rgba(52,211,153,.18)">
     <div class="relative">
-      <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Người ta đang nợ bạn</p>
-      <p id="debt-net" class="text-3xl font-extrabold text-emerald-400 mb-4">---</p>
+      <p id="debt-net-label" class="text-gray-400 text-xs uppercase tracking-widest mb-1">Tổng công nợ</p>
+      <p id="debt-net" class="text-3xl font-extrabold text-emerald-400 mb-1">---</p>
+      <p id="debt-net-sub" class="text-xs mb-4 text-gray-400">---</p>
       <div class="flex gap-3">
-        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.06)"><p class="text-emerald-400 text-xs mb-0.5">Họ nợ bạn</p><p id="debt-pos" class="text-white font-bold text-sm">---</p></div>
-        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.06)"><p class="text-red-400 text-xs mb-0.5">Bạn nợ họ</p><p id="debt-neg" class="text-white font-bold text-sm">---</p></div>
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)"><p class="text-emerald-400 text-xs mb-0.5">Họ nợ bạn</p><p id="debt-pos" class="text-emerald-400 font-bold text-sm">---</p></div>
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)"><p class="text-red-400 text-xs mb-0.5">Bạn nợ họ</p><p id="debt-neg" class="text-red-400 font-bold text-sm">---</p></div>
       </div>
     </div>
   </div>
@@ -366,7 +383,7 @@
 
 <!-- ===== NAV ===== -->
 <nav id="nav" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-10 hidden"
-  style="background:rgba(11,13,23,0.95);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,0.06);padding-bottom:env(safe-area-inset-bottom)">
+  style="background:rgba(11,13,23,0.92);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,0.08);padding-bottom:env(safe-area-inset-bottom)">
   <div class="flex">
     <button id="nav-home"  onclick="go('home')"  class="nav-item flex-1 py-3 flex flex-col items-center gap-1"><svg class="ni w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="ni text-xs font-semibold">Trang chủ</span></button>
     <button id="nav-debts" onclick="go('debts')" class="nav-item flex-1 py-3 flex flex-col items-center gap-1"><svg class="ni w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="ni text-xs font-semibold">Công nợ</span></button>
@@ -389,6 +406,7 @@
       <div class="flex justify-between"><span class="text-gray-500 text-sm">Phân loại</span><span id="bstx-cat" class="text-white text-sm font-medium"></span></div>
       <div class="flex justify-between"><span class="text-gray-500 text-sm">Hạng mục</span><span id="bstx-sub2" class="text-white text-sm font-medium"></span></div>
       <div class="flex justify-between"><span class="text-gray-500 text-sm">Trạng thái</span><span id="bstx-status" class="text-sm font-semibold"></span></div>
+      <div id="bstx-collected-row" class="flex justify-between hidden"><span class="text-gray-500 text-sm">Ngày thu</span><span id="bstx-collected" class="text-emerald-400 text-sm font-medium"></span></div>
     </div>
     <div id="bstx-actions" class="flex gap-2"></div>
   </div>
@@ -437,20 +455,37 @@
     <div class="drag-pill"></div>
     <p class="text-white font-bold text-lg mb-5">⚙️ Cài đặt</p>
 
-    <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3">Số dư dòng tiền</p>
+    <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#16A34A;letter-spacing:0.08em">Số dư dòng tiền</p>
     <input id="set-bal" type="number" class="inp mb-2" placeholder="Số dư hiện có trong ví/TK (vd: 6128000)"/>
     <input id="set-baldate" class="inp mb-2" placeholder="Tính từ ngày dd/MM/yyyy (bỏ trống = hôm nay)"/>
     <button class="btn grad-btn-green mb-2" style="padding:12px" onclick="doSetBalance()">Lưu số dư ban đầu</button>
     <p class="text-gray-600 text-xs mb-6">Chỉ nhập 1 lần. Từ ngày này, mọi thu nhập & chi tiêu sẽ cộng trừ lên con số đó.</p>
 
-    <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-3">Thêm người mới</p>
+    <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#6D5FD4;letter-spacing:0.08em">Thêm người mới</p>
     <input id="set-pname" class="inp mb-2" placeholder="Tên hiển thị (vd: A. Tuấn)"/>
-    <input id="set-pkeys" class="inp mb-2" placeholder="Từ khóa tắt, cách nhau phẩy (vd: tuấn, a tuan)"/>
     <button class="btn grad-btn mb-6" style="padding:12px" onclick="doAddPerson()">+ Thêm người</button>
 
-    <p class="text-purple-400 text-xs font-bold uppercase tracking-widest mb-3">Thêm hạng mục mới</p>
+    <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#6D5FD4;letter-spacing:0.08em">Thêm hạng mục mới</p>
     <div class="flex gap-2 mb-2">
-      <input id="set-cemoji" class="inp" style="width:70px;text-align:center;flex-shrink:0" placeholder="🐱"/>
+      <div class="relative flex-shrink-0">
+        <button id="set-cemoji-btn" type="button" onclick="toggleEmojiPicker(event)"
+          class="inp flex items-center justify-center"
+          style="width:56px;height:48px;padding:0;font-size:1.5rem">📌</button>
+        <input id="set-cemoji" type="hidden" value=""/>
+        <div id="emoji-picker" class="hidden absolute left-0 z-50 rounded-2xl p-2"
+          style="top:54px;width:288px;max-height:216px;overflow-y:auto;background:#1a1d2e;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,.45)">
+          <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px">
+            <button type="button" class="emoji-opt" onclick="pickEmoji('🍜')">🍜</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍚')">🍚</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍔')">🍔</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍕')">🍕</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍱')">🍱</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍣')">🍣</button><button type="button" class="emoji-opt" onclick="pickEmoji('☕')">☕</button><button type="button" class="emoji-opt" onclick="pickEmoji('🧋')">🧋</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('🥤')">🥤</button><button type="button" class="emoji-opt" onclick="pickEmoji('🍺')">🍺</button><button type="button" class="emoji-opt" onclick="pickEmoji('🥂')">🥂</button><button type="button" class="emoji-opt" onclick="pickEmoji('⛽')">⛽</button><button type="button" class="emoji-opt" onclick="pickEmoji('🚗')">🚗</button><button type="button" class="emoji-opt" onclick="pickEmoji('🛵')">🛵</button><button type="button" class="emoji-opt" onclick="pickEmoji('🚌')">🚌</button><button type="button" class="emoji-opt" onclick="pickEmoji('✈️')">✈️</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('🚂')">🚂</button><button type="button" class="emoji-opt" onclick="pickEmoji('🚕')">🚕</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏠')">🏠</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏡')">🏡</button><button type="button" class="emoji-opt" onclick="pickEmoji('💡')">💡</button><button type="button" class="emoji-opt" onclick="pickEmoji('🔧')">🔧</button><button type="button" class="emoji-opt" onclick="pickEmoji('🪴')">🪴</button><button type="button" class="emoji-opt" onclick="pickEmoji('🔌')">🔌</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('🛍️')">🛍️</button><button type="button" class="emoji-opt" onclick="pickEmoji('👗')">👗</button><button type="button" class="emoji-opt" onclick="pickEmoji('👟')">👟</button><button type="button" class="emoji-opt" onclick="pickEmoji('💄')">💄</button><button type="button" class="emoji-opt" onclick="pickEmoji('👜')">👜</button><button type="button" class="emoji-opt" onclick="pickEmoji('🧴')">🧴</button><button type="button" class="emoji-opt" onclick="pickEmoji('💊')">💊</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏥')">🏥</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('💉')">💉</button><button type="button" class="emoji-opt" onclick="pickEmoji('🩺')">🩺</button><button type="button" class="emoji-opt" onclick="pickEmoji('💪')">💪</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏃')">🏃</button><button type="button" class="emoji-opt" onclick="pickEmoji('🧘')">🧘</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏋️')">🏋️</button><button type="button" class="emoji-opt" onclick="pickEmoji('⚽')">⚽</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎾')">🎾</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('🎮')">🎮</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎬')">🎬</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎵')">🎵</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎉')">🎉</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎊')">🎊</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎯')">🎯</button><button type="button" class="emoji-opt" onclick="pickEmoji('🎁')">🎁</button><button type="button" class="emoji-opt" onclick="pickEmoji('🤝')">🤝</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('💼')">💼</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏢')">🏢</button><button type="button" class="emoji-opt" onclick="pickEmoji('📚')">📚</button><button type="button" class="emoji-opt" onclick="pickEmoji('📖')">📖</button><button type="button" class="emoji-opt" onclick="pickEmoji('💻')">💻</button><button type="button" class="emoji-opt" onclick="pickEmoji('📢')">📢</button><button type="button" class="emoji-opt" onclick="pickEmoji('📊')">📊</button><button type="button" class="emoji-opt" onclick="pickEmoji('📈')">📈</button>
+            <button type="button" class="emoji-opt" onclick="pickEmoji('💳')">💳</button><button type="button" class="emoji-opt" onclick="pickEmoji('💵')">💵</button><button type="button" class="emoji-opt" onclick="pickEmoji('💰')">💰</button><button type="button" class="emoji-opt" onclick="pickEmoji('💸')">💸</button><button type="button" class="emoji-opt" onclick="pickEmoji('🏦')">🏦</button><button type="button" class="emoji-opt" onclick="pickEmoji('📦')">📦</button><button type="button" class="emoji-opt" onclick="pickEmoji('⭐')">⭐</button><button type="button" class="emoji-opt" onclick="pickEmoji('📌')">📌</button>
+          </div>
+        </div>
+      </div>
       <input id="set-cname" class="inp" style="flex:1;min-width:0" placeholder="Tên hạng mục"/>
     </div>
     <select id="set-ctype" class="inp mb-2">
@@ -467,13 +502,13 @@
 
 <!-- Debt confirm -->
 <div id="bs-debt" class="bsheet-wrap" onclick="closeBs('bs-debt')">
-  <div class="bsheet" onclick="event.stopPropagation()">
+  <div class="bsheet" onclick="event.stopPropagation()" style="max-height:88dvh;display:flex;flex-direction:column">
     <div class="drag-pill"></div>
     <p class="text-white font-bold text-lg mb-1">Xác nhận đã thu / trả</p>
-    <p id="bs-debt-desc" class="text-gray-400 text-sm mb-5"></p>
-    <div id="bs-debt-rows" class="glass rounded-2xl p-4 mb-5 space-y-2"></div>
-    <button id="bs-debt-btn" class="btn grad-btn-green mb-3" style="padding:14px">Xác nhận</button>
-    <button onclick="closeBs('bs-debt')" class="btn" style="padding:13px;background:rgba(255,255,255,0.07);color:#9ca3af">Hủy</button>
+    <p id="bs-debt-desc" class="text-gray-400 text-sm mb-3"></p>
+    <div id="bs-debt-rows" class="glass rounded-2xl p-4 mb-4 space-y-2" style="overflow-y:auto;flex:1;min-height:0"></div>
+    <button id="bs-debt-btn" class="btn grad-btn-green mb-3" style="padding:14px;flex-shrink:0">Xác nhận</button>
+    <button onclick="closeBs('bs-debt')" class="btn" style="padding:13px;background:rgba(255,255,255,0.07);color:#9ca3af;flex-shrink:0">Hủy</button>
   </div>
 </div>
 
@@ -491,7 +526,7 @@ let HM_THU      = ['💵 Lương','🎁 Thưởng','📦 Thu nhập khác'].map(
 const AVATAR_COLORS = ['bg-indigo-900 text-indigo-300','bg-purple-900 text-purple-300','bg-pink-900 text-pink-300','bg-orange-900 text-orange-300','bg-teal-900 text-teal-300','bg-amber-900 text-amber-300','bg-rose-900 text-rose-300','bg-emerald-900 text-emerald-300','bg-blue-900 text-blue-300','bg-cyan-900 text-cyan-300'];
 
 // ============ STATE ============
-let S = { url:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', curTx:null };
+let S = { url:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
 
 // ============ CACHE ============
 const CACHE_TTL = { getRows: 60, getDebts: 120, getStats: 300, getConfig: 86400 };
@@ -538,11 +573,7 @@ async function doSetup() {
 }
 
 async function enterApp() {
-  const minSplash = 1400;
-  const elapsed = Date.now() - _splashT;
-  if (elapsed < minSplash) await new Promise(r => setTimeout(r, minSplash - elapsed));
-  const sp = document.getElementById('splash');
-  if(sp) { sp.style.opacity='0'; setTimeout(()=>sp.remove(),350); }
+  hideSplash();
   document.getElementById('s-setup').classList.add('hidden');
   document.getElementById('s-setup').classList.remove('active');
   document.getElementById('nav').classList.remove('hidden');
@@ -595,44 +626,23 @@ function go(name) {
 function showAdd(tab) { S.prevScreen=document.querySelector('.screen.active')?.id?.replace('s-','') || 'home'; go('add'); document.getElementById('nav').classList.add('hidden'); switchTab(tab); }
 function goBack()     { go(S.prevScreen||'home'); document.getElementById('nav').classList.remove('hidden'); }
 
-// ============ MONTH TABS ============
+// ============ MONTH ============
 function initMonthTabs() {
   const now = new Date();
   S.curMonth = now.getMonth()+1; S.curYear = now.getFullYear();
-  const months = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
-  [-2,-1,0].forEach(offset => {
-    let m = S.curMonth+offset; let y = S.curYear;
-    if(m<=0){m+=12;y--;}
-    const id = offset===0?'mchip-cur':offset===-1?'mchip-prev1':'mchip-prev2';
-    const el = document.getElementById(id);
-    el.textContent = months[m-1]+' '+y;
-    el.dataset.m = String(m).padStart(2,'0');
-    el.dataset.y = y;
-  });
-}
-
-function selectMonth(offset, el) {
-  document.querySelectorAll('.mchip').forEach(c=>{c.classList.remove('active');c.classList.add('inactive');});
-  el.classList.add('active'); el.classList.remove('inactive');
-  S.curMonth = parseInt(el.dataset.m);
-  S.curYear  = parseInt(el.dataset.y);
-  loadHome();
 }
 
 // ============ LOAD HOME ============
 async function loadHome() {
-  updateCardLabel();
   const rowParams = {action:'getRows', month:String(S.curMonth).padStart(2,'0'), year:S.curYear};
   const balParams = {action:'getBalance'};
-  // Hiển thị cache ngay lập tức nếu có
   const cachedRows = cacheGet(rowParams);
-  if (cachedRows) { S.rows = cachedRows.rows || []; renderRows(); computeCard(); }
+  if (cachedRows) { S.rows = cachedRows.rows || []; renderRows(); }
   const cachedBal = cacheGet(balParams);
   if (cachedBal) renderBalance(cachedBal);
-  // Fetch mới ở background
   try {
     const d = await api(rowParams);
-    S.rows = d.rows || []; renderRows(); computeCard();
+    S.rows = d.rows || []; renderRows();
   } catch(e) { if(!cachedRows) showToast('Lỗi tải dữ liệu: '+e.message,'err'); }
   try {
     renderBalance(await api(balParams));
@@ -641,10 +651,30 @@ async function loadHome() {
 
 function renderBalance(b) {
   const bal = b.balance || 0;
+  const pending = b.pending || 0;   // + = họ nợ bạn (ròng), − = bạn nợ họ (ròng)
+  const real = bal + pending;        // tài sản thực = khả dụng + công nợ ròng
   S.bookBalance = bal;
   document.getElementById('card-total').textContent = (bal<0?'-':'')+fmt(bal)+'đ';
-  const lend = b.pending || 0;
-  document.getElementById('card-lend').textContent = (lend>=0?'+':'-')+fmt(lend)+'đ';
+
+  const barA = document.getElementById('bar-avail');
+  const barO = document.getElementById('bar-other');
+
+  // Thanh so sánh: khả dụng (tím) vs công nợ ròng (xanh = họ nợ bạn, đỏ = bạn nợ)
+  const absA = Math.abs(bal), absP = Math.abs(pending);
+  const basis = (absA + absP) || 1;
+  const cnColor = pending > 0 ? '#6ee7b7' : pending < 0 ? '#f87171' : '#9ca3af';
+  const cnSign  = pending > 0 ? '+' : pending < 0 ? '−' : '';
+  barA.style.width = (absA/basis*100)+'%'; barA.style.background = '#c7d2fe';
+  barO.style.width = (absP/basis*100)+'%'; barO.style.background = pending >= 0 ? '#34d399' : '#f87171';
+  document.getElementById('leg-avail').textContent = fmt(bal)+'đ';
+  document.getElementById('leg-dot').style.background = pending >= 0 ? '#34d399' : '#f87171';
+  const legDebt = document.getElementById('leg-debt');
+  legDebt.textContent = cnSign+fmt(pending)+'đ';
+  legDebt.style.color = cnColor;
+
+  const realEl = document.getElementById('card-real');
+  realEl.textContent = (real<0?'-':'')+fmt(real)+'đ';
+  realEl.style.color = real<0 ? '#f87171' : '#fff';
 }
 
 // ============ RECONCILE (đối soát) ============
@@ -679,25 +709,13 @@ function recCalc() {
 }
 
 
-function updateCardLabel() {
-  document.getElementById('card-month-label').textContent = `Thực chi Th${S.curMonth}/${S.curYear}`;
-}
-
-function computeCard() {
-  // Thực chi tháng = chi − được trả lại, KHÔNG tính dòng Thu nhập
-  const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
-  const filtered = S.rows.filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y && r.category!=='Thu nhập');
-  const expense = filtered.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);
-  const refund  = filtered.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);
-  document.getElementById('card-expense').textContent = fmt(expense-refund)+'đ';
-}
 
 function renderRows() {
   const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
   const filtered = S.rows.filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y);
 
   if(!filtered.length) {
-    document.getElementById('tx-list').innerHTML = '<p class="text-gray-600 text-sm text-center py-8">Chưa có giao dịch nào trong tháng này</p>';
+    document.getElementById('tx-list').innerHTML = '<div class="text-center py-10"><p class="text-gray-500 text-sm mb-1">Chưa có giao dịch tháng này</p><p class="text-gray-400 text-xs">Bấm “Ghi chi tiêu” phía trên để thêm khoản đầu tiên</p></div>';
     return;
   }
 
@@ -745,11 +763,11 @@ function renderRows() {
 async function loadDebts() {
   const p = {action:'getDebts'};
   const cached = cacheGet(p);
-  if (cached) { S.debts = cached.debts || []; renderDebts(); document.getElementById('debt-updated').textContent = 'Từ cache · đang cập nhật...'; }
+  if (cached) { S.debts = cached.debts || []; S.recentCollected = cached.recentCollected || []; renderDebts(); document.getElementById('debt-updated').textContent = 'Từ cache · đang cập nhật...'; }
   else document.getElementById('debt-updated').textContent = 'Đang tải...';
   try {
     const d = await api(p);
-    S.debts = d.debts || []; renderDebts();
+    S.debts = d.debts || []; S.recentCollected = d.recentCollected || []; renderDebts();
     document.getElementById('debt-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
   } catch(e) { if(!cached) showToast('Lỗi tải công nợ','err'); }
 }
@@ -761,15 +779,19 @@ function renderDebts() {
   const totalNeg = owed.reduce((a,d)=>a+Math.abs(d.balance),0);
   const net = totalPos - totalNeg;
 
-  document.getElementById('debt-net').textContent = (net>=0?'+':'')+fmt(net)+'đ';
-  document.getElementById('debt-net').className = 'text-3xl font-extrabold mb-4 '+(net>=0?'text-emerald-400':'text-red-400');
+  document.getElementById('debt-net').textContent = (net>0?'+':net<0?'-':'')+fmt(Math.abs(net))+'đ';
+  document.getElementById('debt-net').className = 'text-3xl font-extrabold mb-1 '+(net>0?'text-emerald-400':net<0?'text-red-400':'text-white');
+  const subEl = document.getElementById('debt-net-sub');
+  if(net>0){ subEl.textContent='Họ đang nợ bạn '+fmt(net)+'đ ròng'; subEl.className='text-xs mb-4 text-emerald-400'; }
+  else if(net<0){ subEl.textContent='Bạn đang nợ họ '+fmt(Math.abs(net))+'đ ròng'; subEl.className='text-xs mb-4 text-red-400'; }
+  else{ subEl.textContent='Không có công nợ'; subEl.className='text-xs mb-4 text-gray-400'; }
   document.getElementById('debt-pos').textContent = fmt(totalPos)+'đ';
   document.getElementById('debt-neg').textContent = fmt(totalNeg)+'đ';
 
   let html = '';
 
   if(owe.length) {
-    html += `<p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3">Người nợ bạn 💰</p>`;
+    html += `<p class="text-emerald-400 text-xs font-bold mb-3">Người nợ bạn 💰</p>`;
     html += `<div class="glass rounded-2xl overflow-hidden mb-5">`;
     owe.forEach((d,i) => {
       const initial = d.name.trim().split(' ').pop()[0].toUpperCase();
@@ -780,7 +802,7 @@ function renderDebts() {
       const oweSub = gNeg > 0
         ? `${fmt(gPos)}đ − ${fmt(gNeg)}đ đối trừ = ${fmt(d.balance)}đ`
         : `${d.rows.length} khoản chưa thu`;
-      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.05);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
+      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
         <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
         <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs truncate">${oweSub}</p></div>
         <div class="text-right flex-shrink-0"><p class="text-emerald-400 font-bold">+${fmt(d.balance)}đ</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
@@ -790,13 +812,13 @@ function renderDebts() {
   }
 
   if(owed.length) {
-    html += `<p class="text-red-400 text-xs font-bold uppercase tracking-widest mb-3">Bạn đang nợ 😅</p>`;
+    html += `<p class="text-red-400 text-xs font-bold mb-3">Bạn đang nợ 😅</p>`;
     html += `<div class="glass rounded-2xl overflow-hidden mb-5">`;
     owed.forEach((d,i) => {
       const initial = d.name.trim().split(' ').pop()[0].toUpperCase();
       const ci = d.name.length % AVATAR_COLORS.length;
       const border = i<owed.length-1 ? 'border-b' : '';
-      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.05);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
+      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
         <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
         <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs">${(()=>{const gN=d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);const gP=d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);return gP>0?`${fmt(gN)}đ − ${fmt(gP)}đ đối trừ = ${fmt(Math.abs(d.balance))}đ còn`:`${fmt(Math.abs(d.balance))}đ còn nợ`;})()} </p></div>
         <div class="text-right flex-shrink-0"><p class="text-red-400 font-bold">-${fmt(Math.abs(d.balance))}đ</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
@@ -809,6 +831,28 @@ function renderDebts() {
     html = '<p class="text-gray-600 text-sm text-center py-8">Không có công nợ nào 🎉</p>';
   }
 
+  // Lịch sử đã thu / đã trả
+  const rc = S.recentCollected || [];
+  if(rc.length) {
+    html += `<p class="text-gray-500 text-xs font-bold mb-3">✓ Đã thu gần đây</p>`;
+    html += `<div class="glass rounded-2xl overflow-hidden mb-5">`;
+    rc.forEach((r,i) => {
+      const initial = r.name.trim().split(' ').pop()[0].toUpperCase();
+      const ci = r.name.length % AVATAR_COLORS.length;
+      const border = i<rc.length-1 ? 'border-b' : '';
+      const dirText = r.amount > 0 ? 'đã thu' : 'đã trả';
+      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06)">
+        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}" style="opacity:.7">${initial}</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-semibold text-sm truncate">${r.name} <span class="text-gray-500 font-normal">· ${r.detail||'(trống)'}</span></p>
+          <p class="text-gray-500 text-xs">${r.date} → ${dirText} <span class="text-emerald-500">${r.collectedDate}</span></p>
+        </div>
+        <span class="text-gray-400 font-bold text-sm flex-shrink-0">${fmt(Math.abs(r.amount))}đ</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
   document.getElementById('debt-list').innerHTML = html;
 }
 
@@ -817,6 +861,9 @@ function initStatsSelectors() {
   const mSel = document.getElementById('stats-month');
   const ySel = document.getElementById('stats-year');
   const now = new Date();
+  const allM = document.createElement('option');
+  allM.value = ''; allM.textContent = 'Cả năm';
+  mSel.appendChild(allM);
   ['01','02','03','04','05','06','07','08','09','10','11','12'].forEach((m,i) => {
     const opt = document.createElement('option');
     opt.value = m; opt.textContent = 'Tháng '+parseInt(m);
@@ -829,44 +876,79 @@ function initStatsSelectors() {
     if(y===now.getFullYear()) opt.selected = true;
     ySel.appendChild(opt);
   }
+  const allY = document.createElement('option');
+  allY.value = ''; allY.textContent = 'Tất cả năm';
+  ySel.appendChild(allY);
 }
 
 async function loadStats() {
-  const month = document.getElementById('stats-month').value;
   const year  = document.getElementById('stats-year').value;
+  const mSel  = document.getElementById('stats-month');
+  if (!year) { mSel.value = ''; mSel.style.opacity='0.4'; mSel.style.pointerEvents='none'; }
+  else        { mSel.style.opacity=''; mSel.style.pointerEvents=''; }
+  const month = mSel.value;
   const p  = {action:'getStats', month, year};
   const pd = {action:'getDebts'};
+  // Tháng trước để so sánh (chỉ khi chọn 1 tháng cụ thể)
+  let pPrev = null;
+  if (month && year) {
+    let pm = parseInt(month)-1, py = parseInt(year);
+    if (pm===0) { pm=12; py--; }
+    pPrev = {action:'getStats', month:String(pm).padStart(2,'0'), year:String(py)};
+  }
   const cached  = cacheGet(p);
   const cachedD = cacheGet(pd);
   const debts0  = cachedD ? cachedD.debts : S.debts;
-  if (cached) { renderStats(cached, month, year, debts0); }
+  if (cached) { renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null); }
   else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
   try {
-    const [d, dd] = await Promise.all([api(p), api(pd).catch(()=>({debts:debts0}))]);
-    renderStats(d, month, year, dd.debts || []);
+    const [d, dd, dprev] = await Promise.all([
+      api(p),
+      api(pd).catch(()=>({debts:debts0})),
+      pPrev ? api(pPrev).catch(()=>null) : Promise.resolve(null)
+    ]);
+    renderStats(d, month, year, dd.debts || [], dprev);
   } catch(e) { if(!cached) showToast('Lỗi tải thống kê','err'); }
 }
 
-function renderStats(d, month, year, debts) {
+function renderStats(d, month, year, debts, prev) {
   const byPerson = d.byPerson || {};
   const byCat    = d.byCategory || {};
-  const expense  = Object.values(byPerson).filter(v=>v>0).reduce((a,b)=>a+b,0);
-  const income   = Object.values(byPerson).filter(v=>v<0).reduce((a,b)=>a+Math.abs(b),0);
-  const net      = expense - income;
-  const savePct  = income > 0 ? Math.max(0, Math.round((income - net) / income * 100)) : null;
+  const income   = d.totalIncome || 0;          // thu nhập thật (Lương/Thưởng…)
+  const expense  = byPerson[OWNER] || 0;        // chi tiêu cá nhân (chỉ của chủ app)
+  const surplus  = income - expense;            // + = còn dư, − = thâm hụt
+  const savePct  = income > 0 ? Math.max(0, Math.min(100, Math.round(surplus / income * 100))) : null;
 
-  const cats     = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCat   = cats[0]?.[1] || 1;
+  // So sánh với tháng trước
+  const pctDelta = (cur, pv) => (pv && pv > 0) ? Math.round((cur - pv) / pv * 100) : null;
+  const trend = (delta, upIsGood) => {
+    if (delta === null) return '';
+    if (delta === 0)    return `<p class="text-xs mt-0.5" style="color:#9ca3af">— 0%</p>`;
+    const good = (delta > 0) === upIsGood;
+    return `<p class="text-xs mt-0.5" style="color:${good ? '#16A34A' : '#DC2626'}">${delta > 0 ? '↑' : '↓'}${Math.abs(delta)}%</p>`;
+  };
+  const dIncome  = prev ? trend(pctDelta(income,  prev.totalIncome || 0), true)  : '';
+  const dExpense = prev ? trend(pctDelta(expense, (prev.byPerson||{})[OWNER] || 0), false) : '';
+
+  const sLabel = surplus > 0 ? 'Còn dư' : surplus < 0 ? 'Thâm hụt' : 'Hòa vốn';
+  const sCls   = surplus > 0 ? 'emerald' : surplus < 0 ? 'red' : 'gray';
+  const sVal   = (surplus > 0 ? '+' : surplus < 0 ? '−' : '') + fmt(surplus) + 'đ';
+
   const debtList = (debts||[]).filter(x=>x.balance>0).sort((a,b)=>b.balance-a.balance);
   const totalDebt = debtList.reduce((a,x)=>a+x.balance,0);
 
   // Block 1: Dòng tiền
-  let html = `<div class="glass rounded-2xl p-5 mb-4">
-    <p class="text-white font-semibold mb-4">Dòng tiền Th${month}/${year}</p>
+  const title = !month && !year ? 'tổng cộng' : !month ? ('năm ' + year) : ('Th' + month + '/' + year);
+  let prevTxt = '';
+  if (prev && month && year) { let pm = parseInt(month)-1, py = parseInt(year); if (pm===0) { pm=12; py--; } prevTxt = 'So với Th' + String(pm).padStart(2,'0') + '/' + py; }
+  const titleBlock = prevTxt
+    ? `<p class="text-white font-semibold mb-1">Dòng tiền ${title}</p><p class="text-gray-500 text-xs mb-4">${prevTxt}</p>`
+    : `<p class="text-white font-semibold mb-4">Dòng tiền ${title}</p>`;
+  let html = `<div class="glass rounded-2xl p-5 mb-4">${titleBlock}
     <div class="grid grid-cols-3 gap-2 mb-4">
-      <div class="text-center"><p class="text-emerald-400 text-xs mb-1">Thu nhập</p><p class="text-white font-bold text-sm">${fmt(income)}đ</p></div>
-      <div class="text-center"><p class="text-red-400 text-xs mb-1">Chi tiêu</p><p class="text-white font-bold text-sm">${fmt(expense)}đ</p></div>
-      <div class="text-center"><p class="text-gray-400 text-xs mb-1">Thực chi</p><p class="text-${net>0?'red':'emerald'}-400 font-bold text-sm">${fmt(net)}đ</p></div>
+      <div class="text-center"><p class="text-emerald-400 text-xs mb-1">Thu nhập</p><p class="text-white font-bold text-sm">${fmt(income)}đ</p>${dIncome}</div>
+      <div class="text-center"><p class="text-red-400 text-xs mb-1">Chi tiêu</p><p class="text-white font-bold text-sm">${fmt(expense)}đ</p>${dExpense}</div>
+      <div class="text-center"><p class="text-gray-400 text-xs mb-1">${sLabel}</p><p class="text-${sCls}-400 font-bold text-sm">${sVal}</p></div>
     </div>`;
   if (savePct !== null) {
     const barCls = savePct>=20?'bg-emerald-500':savePct>0?'bg-amber-400':'bg-red-500';
@@ -875,6 +957,17 @@ function renderStats(d, month, year, debts) {
       <div class="flex-1 prog-bg"><div class="prog-fill ${barCls}" style="width:${Math.min(100,savePct)}%"></div></div>
       <span class="text-gray-300 text-xs flex-shrink-0 w-8 text-right">${savePct}%</span>
     </div>`;
+  }
+  if (month && year && expense > 0) {
+    const m = parseInt(month), y = parseInt(year);
+    const now = new Date();
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const isCurrent = (y === now.getFullYear() && m === now.getMonth()+1);
+    const daysElapsed = isCurrent ? now.getDate() : daysInMonth;
+    const perDay = Math.round(expense / daysElapsed);
+    let txt = 'Chi TB ' + fmt(perDay) + 'đ/ngày';
+    if (isCurrent) txt += ' · đà này cuối tháng ~' + fmt(Math.round(perDay * daysInMonth)) + 'đ';
+    html += `<div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:10px"><p class="text-gray-400 text-xs">${txt}</p></div>`;
   }
   html += `</div>`;
 
@@ -899,16 +992,22 @@ function renderStats(d, month, year, debts) {
     html += `</div></div>`;
   }
 
-  // Block 3: Theo hạng mục
-  if (cats.length) {
-    const catEmoji = {};
-    [...HM_CA_NHAN, ...HM_CHO_MUON].forEach(h => {
-      const m = h.label.match(/^(\S+)\s/);
-      if(m && m[1] !== h.name) catEmoji[h.name] = m[1];
-    });
-    html += `<div class="glass rounded-2xl p-5 mb-4"><p class="text-white font-semibold mb-4">Theo hạng mục</p><div class="space-y-3">`;
-    cats.forEach(([name,amt]) => {
-      const pct = Math.round(amt/maxCat*100);
+  // Block 3: Theo hạng mục — tách Cá nhân và Cho mượn/Ứng
+  const catEmoji = {};
+  [...HM_CA_NHAN, ...HM_CHO_MUON].forEach(h => {
+    const m = h.label.match(/^(\S+)\s/);
+    if(m && m[1] !== h.name) catEmoji[h.name] = m[1];
+  });
+  const caNhanNames  = new Set(HM_CA_NHAN.map(h => h.name));
+  const choMuonNames = new Set(HM_CHO_MUON.map(h => h.name));
+  const catsCaNhan  = Object.entries(byCat).filter(([n,v])=>v>0 && caNhanNames.has(n)).sort((a,b)=>b[1]-a[1]);
+  const catsChoMuon = Object.entries(byCat).filter(([n,v])=>v>0 && choMuonNames.has(n)).sort((a,b)=>b[1]-a[1]);
+
+  if (catsCaNhan.length) {
+    const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}đ</span></div><div class="space-y-3">`;
+    catsCaNhan.forEach(([name,amt]) => {
+      const pct = Math.round(amt/totalCaNhan*100);
       const emoji = catEmoji[name] || '📌';
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
         <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}đ</span></div>
@@ -917,20 +1016,78 @@ function renderStats(d, month, year, debts) {
     html += `</div></div>`;
   }
 
+  if (catsChoMuon.length) {
+    const totalChoMuon = catsChoMuon.reduce((s,[,v])=>s+v, 0);
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}đ</span></div><div class="space-y-3">`;
+    catsChoMuon.forEach(([name,amt]) => {
+      const pct = Math.round(amt/totalChoMuon*100);
+      const emoji = catEmoji[name] || '📌';
+      html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}đ</span></div>
+        <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>`;
+    });
+    html += `</div></div>`;
+  }
+
   document.getElementById('stats-content').innerHTML = html;
 }
 
 // ============ NUMPAD ============
+function calcEval(a, op, b) {
+  if(op==='+') return a + b;
+  if(op==='-') return Math.max(0, a - b);
+  if(op==='*') return a * b;
+  if(op==='/') return b ? Math.round(a / b) : a;
+  return b;
+}
+
 function nk(tab, key) {
+  // Operator keys — tab 0 only
+  if(tab===0 && (key==='+'||key==='-'||key==='*'||key==='/')) {
+    const cur = parseInt(S.amts[0]||'0');
+    if(S.calcOp0) { // chained: evaluate pending first
+      const res = calcEval(S.calcPrev0, S.calcOp0, cur);
+      S.calcPrev0 = res;
+      document.getElementById('d0').textContent = fmt(res);
+    } else {
+      S.calcPrev0 = cur;
+    }
+    S.calcOp0 = key;
+    S.amts[0] = '0';
+    const sym = {'+':'+','-':'−','*':'×','/':'÷'}[key]||key;
+    document.getElementById('d0f').textContent = fmt(S.calcPrev0)+' '+sym;
+    return;
+  }
+
   let v = S.amts[tab] || '0';
-  if(key==='del') v = v.length>1 ? v.slice(0,-1) : '0';
-  else if(v==='0') v = key==='0'||key==='000' ? '0' : key;
+  if(key==='del') {
+    // ⌫ khi đang chờ toán tử → hủy toán tử
+    if(tab===0 && S.calcOp0 && v==='0') {
+      S.calcOp0=''; v=String(S.calcPrev0); S.calcPrev0=0;
+      S.amts[0]=v;
+      document.getElementById('d0').textContent=fmt(parseInt(v));
+      document.getElementById('d0f').textContent=parseInt(v)>0?fmt(parseInt(v))+' đồng':'';
+      return;
+    }
+    v = v.length>1 ? v.slice(0,-1) : '0';
+  }
+  else if(v==='0') { v = key==='0'||key==='000' ? '0' : key; }
   else { const n = v+key; v = n.length>11 ? v : n; }
   S.amts[tab] = v;
   const disp = document.getElementById('d'+tab);
-  if(disp) disp.textContent = fmt(parseInt(v));
   const fmt0 = document.getElementById('d0f');
-  if(tab===0 && fmt0) fmt0.textContent = parseInt(v)>0 ? fmt(parseInt(v))+' đồng' : '';
+  if(tab===0 && S.calcOp0) {
+    const cur = parseInt(v)||0;
+    const res = calcEval(S.calcPrev0, S.calcOp0, cur);
+    const sym = {'+':'+','-':'−','*':'×','/':'÷'}[S.calcOp0];
+    if(disp) disp.textContent = fmt(res);   // số to hiện kết quả ngay
+    if(fmt0) fmt0.textContent = `${fmt(S.calcPrev0)} ${sym} ${fmt(cur)} = ${fmt(res)}`;
+  } else {
+    if(disp) disp.textContent = fmt(parseInt(v));
+    if(tab===0 && fmt0) {
+      fmt0.textContent = parseInt(v)>0 ? fmt(parseInt(v))+' đồng' : '';
+    }
+  }
   if(tab===1) calcSplit();
 }
 
@@ -964,13 +1121,14 @@ function selectPerson0(el, name) {
   const badge = document.getElementById('pl0');
   const hint  = document.getElementById('pl0-hint');
   document.getElementById('dir-toggle0').classList.toggle('hidden', isKhoa);
+  if (isKhoa) document.getElementById('owe-mode0').classList.add('hidden');
   if (!isKhoa) setDir('them_owe');
   if(isKhoa) {
     badge.textContent='Cá nhân'; badge.style='background:rgba(99,102,241,0.2);color:#a5b4fc';
     hint.textContent='→ Đã thu tự động ✓'; hint.className='text-gray-600 text-xs';
     renderHM('hm0', HM_CA_NHAN);
   } else {
-    badge.textContent='Cho mượn/ Ứng'; badge.style='background:rgba(16,185,129,0.15);color:#6ee7b7';
+    badge.textContent='Cho mượn/ Ứng'; badge.style='background:rgba(16,185,129,0.18);color:#6ee7b7';
     hint.textContent='→ Đã thu cần tick tay sau'; hint.className='text-amber-600 text-xs';
     renderHM('hm0', HM_CHO_MUON);
   }
@@ -983,6 +1141,21 @@ function setDir(dir) {
   document.getElementById('dir-them').classList.toggle('off', isI);
   document.getElementById('dir-me').classList.toggle('on', isI);
   document.getElementById('dir-me').classList.toggle('off', !isI);
+  // Sub-toggle "trả giúp / vay tiền mặt" chỉ hiện khi Bạn nợ họ
+  document.getElementById('owe-mode0').classList.toggle('hidden', !isI);
+  if(isI) setOweMode(S.oweMode0);
+}
+
+function setOweMode(mode) {
+  S.oweMode0 = mode;
+  const isCash = mode==='cash';
+  document.getElementById('owe-fronted').classList.toggle('on', !isCash);
+  document.getElementById('owe-fronted').classList.toggle('off', isCash);
+  document.getElementById('owe-cash').classList.toggle('on', isCash);
+  document.getElementById('owe-cash').classList.toggle('off', !isCash);
+  document.getElementById('owe-mode-hint').textContent = isCash
+    ? '→ Bạn cầm tiền mặt về: số dư tăng, không tính là chi tiêu'
+    : '→ Họ trả hộ khoản bạn dùng: tính là chi tiêu, số dư không đổi';
 }
 
 function toggleSplit(el) {
@@ -1055,7 +1228,7 @@ function setKind(kind) {
   document.getElementById('kind-thu').classList.toggle('on', isThu);
   document.getElementById('kind-thu').classList.toggle('off', !isThu);
   document.getElementById('chi-only0').style.display = isThu ? 'none' : 'block';
-  if (isThu) document.getElementById('dir-toggle0').classList.add('hidden');
+  if (isThu) { document.getElementById('dir-toggle0').classList.add('hidden'); document.getElementById('owe-mode0').classList.add('hidden'); }
   document.getElementById('btn0').textContent = isThu ? 'Ghi thu nhập' : 'Ghi lại';
   document.getElementById('dt0').placeholder = isThu ? 'Lương tháng 6, thưởng dự án...' : 'Mô tả chi tiết...';
   if (isThu) renderHM('hm0', HM_THU);
@@ -1063,6 +1236,12 @@ function setKind(kind) {
 }
 
 async function submit0() {
+  if(S.calcOp0) {
+    const res = calcEval(S.calcPrev0, S.calcOp0, parseInt(S.amts[0]||'0'));
+    S.calcPrev0=0; S.calcOp0=''; S.amts[0]=String(res);
+    document.getElementById('d0').textContent=fmt(res);
+    document.getElementById('d0f').textContent=res>0?fmt(res)+' đồng':'';
+  }
   const amt = parseInt(S.amts[0]||'0');
   if(!amt) { showToast('Nhập số tiền','err'); return; }
   const isThu = S.kind0==='thu';
@@ -1072,7 +1251,8 @@ async function submit0() {
   try {
     const detail = document.getElementById('dt0').value;
     const isIOwe = !isThu && S.dir0==='i_owe';
-    if (isIOwe) {
+    if (isIOwe && S.oweMode0==='fronted') {
+      // Họ trả giúp khoản bạn dùng → 2 dòng
       // Row 1: OWNER chi (Cá nhân, TRUE)
       const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:getHM('hm0') });
       // Row 2: person debt — negative = bạn nợ họ (Cho mượn, FALSE)
@@ -1080,6 +1260,12 @@ async function submit0() {
       S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
       resetTab(0); goBack();
       setTimeout(()=>showToast('Đã ghi — chi của bạn + bạn nợ họ ✓','ok'),200);
+    } else if (isIOwe) {
+      // Vay tiền mặt → 1 dòng nợ duy nhất (số dư tự tăng, không tính chi tiêu)
+      const r1 = await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Vay tiền mặt', amount:-amt, subcategory:getHM('hm0') });
+      S.lastRowIndex = r1.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
+      resetTab(0); goBack();
+      setTimeout(()=>showToast('Đã ghi — vay tiền mặt, bạn nợ họ ✓','ok'),200);
     } else {
       const params = isThu
         ? { action:'addRow', kind:'income', name:OWNER, detail:detail||'Thu nhập', amount:amt, subcategory:getHM('hm0') }
@@ -1113,7 +1299,7 @@ async function submit1() {
 function resetTab(tab) {
   S.amts[tab]='0';
   document.getElementById('d'+tab).textContent='0';
-  if(tab===0) { document.getElementById('d0f').textContent=''; S.dir0='them_owe'; document.getElementById('dir-toggle0').classList.add('hidden'); setKind('chi'); }
+  if(tab===0) { S.calcPrev0=0; S.calcOp0=''; document.getElementById('d0f').textContent=''; S.dir0='them_owe'; S.oweMode0='fronted'; document.getElementById('dir-toggle0').classList.add('hidden'); document.getElementById('owe-mode0').classList.add('hidden'); setKind('chi'); }
   const inp = document.getElementById('dt'+tab); if(inp) inp.value='';
   renderHM('hm'+tab, tab===0 ? (S.selectedPerson0===OWNER ? HM_CA_NHAN : HM_CHO_MUON) : HM_CA_NHAN);
 }
@@ -1152,6 +1338,13 @@ function openTxDetail(r) {
   document.getElementById('bstx-date').textContent = r.date;
   document.getElementById('bstx-cat').textContent  = r.category;
   document.getElementById('bstx-sub2').textContent = r.subcategory||'—';
+  const collRow = document.getElementById('bstx-collected-row');
+  if (r.collected && r.collectedDate) {
+    document.getElementById('bstx-collected').textContent = r.collectedDate;
+    collRow.classList.remove('hidden');
+  } else {
+    collRow.classList.add('hidden');
+  }
   const statusEl = document.getElementById('bstx-status');
   const actions  = document.getElementById('bstx-actions');
   let mainBtns;
@@ -1168,7 +1361,7 @@ function openTxDetail(r) {
   actions.className = 'space-y-2';
   actions.innerHTML = `<div class="flex gap-2">${mainBtns}</div>
     <div class="flex gap-2">
-      <button onclick="openEdit()" class="btn flex-1" style="padding:12px;background:rgba(99,102,241,0.15);color:#818cf8">✏️ Sửa</button>
+      <button onclick="openEdit()" class="btn flex-1" style="padding:12px;background:rgba(0,90,255,0.15);color:#4D94FF">✏️ Sửa</button>
       <button onclick="deleteTx(${r.rowIndex},this)" class="btn flex-1" style="padding:12px;background:rgba(239,68,68,0.12);color:#f87171">Xóa</button>
     </div>`;
   openBs('bs-tx');
@@ -1259,17 +1452,29 @@ async function doSetBalance() {
 
 async function doAddPerson() {
   const name = document.getElementById('set-pname').value.trim();
-  const keys = document.getElementById('set-pkeys').value.trim();
   if(!name) { showToast('Nhập tên trước','err'); return; }
   try {
-    await api({action:'addPerson', name:name, keys:keys});
+    await api({action:'addPerson', name:name});
     document.getElementById('set-pname').value='';
-    document.getElementById('set-pkeys').value='';
     showToast('Đã thêm '+name+' ✓','ok');
     const cfg = await api({action:'getConfig'});
     applyConfig(cfg);
   } catch(e) { showToast(e.message,'err'); }
 }
+
+function toggleEmojiPicker(e) {
+  e.stopPropagation();
+  document.getElementById('emoji-picker').classList.toggle('hidden');
+}
+function pickEmoji(em) {
+  document.getElementById('set-cemoji').value = em;
+  document.getElementById('set-cemoji-btn').textContent = em;
+  document.getElementById('emoji-picker').classList.add('hidden');
+}
+document.addEventListener('click', () => {
+  const p = document.getElementById('emoji-picker');
+  if(p) p.classList.add('hidden');
+});
 
 async function doAddCategory() {
   const name  = document.getElementById('set-cname').value.trim();
@@ -1281,6 +1486,7 @@ async function doAddCategory() {
     await api({action:'addCategory', name:name, emoji:emoji, type:type, keys:keys});
     document.getElementById('set-cname').value='';
     document.getElementById('set-cemoji').value='';
+    document.getElementById('set-cemoji-btn').textContent='📌';
     document.getElementById('set-ckeys').value='';
     showToast('Đã thêm hạng mục '+name+' ✓','ok');
     const cfg = await api({action:'getConfig'});
@@ -1315,9 +1521,12 @@ function openDebtSheet(d) {
     const pos = r.amount > 0;
     const col = pos ? 'text-emerald-400' : 'text-red-400';
     const sign = pos ? '+' : '-';
-    return `<div class="flex justify-between items-center gap-2">
-      <span class="text-gray-300 text-sm truncate">${r.detail||'(trống)'} · ${r.date}</span>
-      <span class="${col} text-sm font-bold flex-shrink-0">${sign}${fmt(Math.abs(r.amount))}đ</span>
+    return `<div class="flex justify-between items-start gap-2">
+      <div class="flex-1 min-w-0">
+        <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
+        <p class="text-sm truncate" style="color:#d1d5db">${r.detail||'(trống)'}</p>
+      </div>
+      <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}đ</span>
     </div>`;
   }).join('');
   const btn = document.getElementById('bs-debt-btn');
@@ -1348,9 +1557,18 @@ function showToast(msg, type) {
 // ============ FORMAT ============
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 
+function hideSplash() {
+  const delay = Math.max(0, 1400 - (Date.now() - _splashT));
+  setTimeout(() => {
+    const sp = document.getElementById('splash');
+    if(sp) { sp.style.opacity='0'; setTimeout(()=>sp.remove(), 350); }
+  }, delay);
+}
+
 // ============ INIT ============
 const savedUrl = localStorage.getItem('apiUrl');
 if(savedUrl) { S.url = savedUrl; document.getElementById('setup-url').value = savedUrl; enterApp(); }
+else { hideSplash(); }
 
 if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>

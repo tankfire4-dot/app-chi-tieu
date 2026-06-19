@@ -82,8 +82,14 @@ function ensureSetup() {
 
   if (!ss.getSheetByName(TAB_DATA)) {
     var s = ss.insertSheet(TAB_DATA);
-    s.appendRow(["Ngày", "Tên", "Phân loại", "Hạng mục", "Chi tiết", "Số tiền", "Đã thu"]);
-    s.getRange(1, 1, 1, 7).setFontWeight("bold");
+    s.appendRow(["Ngày", "Tên", "Phân loại", "Hạng mục", "Chi tiết", "Số tiền", "Đã thu", "Ngày thu"]);
+    s.getRange(1, 1, 1, 8).setFontWeight("bold");
+  } else {
+    // Migration: thêm cột "Ngày thu" cho sheet cũ (chỉ chạy 1 lần)
+    var ds = ss.getSheetByName(TAB_DATA);
+    if (String(ds.getRange(1, 8).getValue()).trim() === "") {
+      ds.getRange(1, 8).setValue("Ngày thu").setFontWeight("bold");
+    }
   }
 
   if (!ss.getSheetByName(TAB_PEOPLE)) {
@@ -325,21 +331,22 @@ function doGet(e) {
         var year  = p.year  || "";
 
         if (month || year) {
-          var data = sheet.getRange(2, 1, last - 1, 7).getValues();
+          var data = sheet.getRange(2, 1, last - 1, 8).getValues();
           var rows = [];
           data.forEach(function(row, i) {
             var d = dateStr(row[0]);
             if (month && d.slice(3, 5) !== month) return;
             if (year  && d.slice(6, 10) !== year)  return;
             rows.push({
-              rowIndex:    i + 2,
-              date:        d,
-              name:        String(row[1] || ""),
-              category:    String(row[2] || ""),
-              subcategory: String(row[3] || ""),
-              detail:      String(row[4] || ""),
-              amount:      Number(row[5]) || 0,
-              collected:   row[6] === true
+              rowIndex:      i + 2,
+              date:          d,
+              name:          String(row[1] || ""),
+              category:      String(row[2] || ""),
+              subcategory:   String(row[3] || ""),
+              detail:        String(row[4] || ""),
+              amount:        Number(row[5]) || 0,
+              collected:     row[6] === true,
+              collectedDate: row[7] ? dateStr(row[7]) : ""
             });
           });
           return ok({ rows: rows.reverse() });
@@ -347,18 +354,19 @@ function doGet(e) {
 
         var limit = Math.min(parseInt(p.limit || "100"), 500);
         var start = Math.max(2, last - limit + 1);
-        var data  = sheet.getRange(start, 1, last - start + 1, 7).getValues();
+        var data  = sheet.getRange(start, 1, last - start + 1, 8).getValues();
 
         var rows = data.map(function(row, i) {
           return {
-            rowIndex:    start + i,
-            date:        dateStr(row[0]),
-            name:        String(row[1] || ""),
-            category:    String(row[2] || ""),
-            subcategory: String(row[3] || ""),
-            detail:      String(row[4] || ""),
-            amount:      Number(row[5]) || 0,
-            collected:   row[6] === true
+            rowIndex:      start + i,
+            date:          dateStr(row[0]),
+            name:          String(row[1] || ""),
+            category:      String(row[2] || ""),
+            subcategory:   String(row[3] || ""),
+            detail:        String(row[4] || ""),
+            amount:        Number(row[5]) || 0,
+            collected:     row[6] === true,
+            collectedDate: row[7] ? dateStr(row[7]) : ""
           };
         }).reverse();
 
@@ -462,12 +470,16 @@ function doGet(e) {
 
         // Chỉ cập nhật field nào được gửi lên
         // Dòng Thu nhập giữ nguyên phân loại, không đổi người
-        var curCat = String(sheet.getRange(rowIndex, 3).getValue());
+        var curCat  = String(sheet.getRange(rowIndex, 3).getValue());
+        var curName = String(sheet.getRange(rowIndex, 2).getValue());
         if (p.name !== undefined && p.name !== "" && curCat !== "Thu nhập") {
           var isOwner = p.name === getOwner();
+          var wasOwner = curName === getOwner();
           sheet.getRange(rowIndex, 2).setValue(p.name);
           sheet.getRange(rowIndex, 3).setValue(isOwner ? "Cá nhân" : "Cho mượn/ Ứng");
-          sheet.getRange(rowIndex, 7).setValue(isOwner);  // đổi người → reset Đã thu
+          // Chỉ reset "Đã thu" khi đổi bản chất khoản (chủ app ↔ người khác),
+          // tránh hồi sinh khoản nợ đã tất toán khi chỉ sửa số tiền/chi tiết
+          if (isOwner !== wasOwner) sheet.getRange(rowIndex, 7).setValue(isOwner);
         }
         if (p.subcategory !== undefined) sheet.getRange(rowIndex, 4).setValue(p.subcategory);
         if (p.detail      !== undefined) sheet.getRange(rowIndex, 5).setValue(p.detail);
@@ -526,15 +538,31 @@ function doGet(e) {
         var last  = sheet.getLastRow();
         if (last < 2) return ok({ debts: [] });
 
-        var data    = sheet.getRange(2, 1, last - 1, 7).getValues();
-        var debtMap = {};
+        var data      = sheet.getRange(2, 1, last - 1, 8).getValues();
+        var debtMap   = {};
+        var collected = [];
 
         data.forEach(function(row, i) {
           if (String(row[2]) !== "Cho mượn/ Ứng") return;
-          if (row[6] === true) return;
 
           var name = String(row[1] || "");
           var amt  = Number(row[5]) || 0;
+
+          if (row[6] === true) {
+            // đã thu/đã trả → vào lịch sử (chỉ tính khoản có ngày thu)
+            if (row[7]) {
+              collected.push({
+                rowIndex:      i + 2,
+                name:          name,
+                detail:        String(row[4] || ""),
+                amount:        amt,
+                date:          dateStr(row[0]),
+                collectedDate: dateStr(row[7])
+              });
+            }
+            return;
+          }
+
           if (!debtMap[name]) debtMap[name] = { balance: 0, rows: [] };
           debtMap[name].balance += amt;
           debtMap[name].rows.push({
@@ -549,7 +577,11 @@ function doGet(e) {
           return { name: name, balance: debtMap[name].balance, rows: debtMap[name].rows };
         }).sort(function(a, b) { return b.balance - a.balance; });
 
-        return ok({ debts: debts });
+        // Lịch sử đã thu: mới nhất trước, lấy tối đa 20 khoản
+        collected.sort(function(a, b) { return dateKey(b.collectedDate) < dateKey(a.collectedDate) ? -1 : 1; });
+        var recentCollected = collected.slice(0, 20);
+
+        return ok({ debts: debts, recentCollected: recentCollected });
       }
 
       // ── Số dư dòng tiền ────────────────────────────────────
@@ -607,8 +639,12 @@ function doGet(e) {
         if (!indexes.length) return err("Không có dòng nào");
 
         var sheet = getSheet();
-        indexes.forEach(function(r) { sheet.getRange(r, 7).setValue(true); });
-        return ok({ marked: indexes.length });
+        var nowStr = today();
+        indexes.forEach(function(r) {
+          sheet.getRange(r, 7).setValue(true);
+          sheet.getRange(r, 8).setValue(nowStr);   // ghi ngày hoàn tất công nợ
+        });
+        return ok({ marked: indexes.length, collectedDate: nowStr });
       }
 
       default:
