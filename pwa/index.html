@@ -80,6 +80,7 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes splashDot{0%,80%,100%{opacity:.25;transform:scale(.75)}40%{opacity:1;transform:scale(1)}}
     @keyframes splashIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+    @keyframes splashBar{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
     .bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
     .bar-wrap{width:100%;display:flex;justify-content:center;align-items:flex-end;height:60px}
     .bar{width:22px;border-radius:6px 6px 3px 3px;min-height:4px;transition:height .6s cubic-bezier(.16,1,.3,1)}
@@ -111,6 +112,8 @@
     .text-xs{font-size:12px;line-height:16px}.text-sm{font-size:14px;line-height:20px}.text-base{font-size:16px;line-height:24px}
     .text-lg{font-size:18px;line-height:28px}.text-xl{font-size:20px;line-height:28px}.text-2xl{font-size:24px;line-height:32px}.text-3xl{font-size:30px;line-height:36px}
     .font-normal{font-weight:400}.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-black{font-weight:900}
+    /* Tracking chặt nhẹ cho text đậm/số — đồng bộ phong cách số với bản Claude Design */
+    .font-semibold,.font-bold,.font-extrabold,.font-black{letter-spacing:-0.012em}
     .font-mono{font-family:ui-monospace,monospace}
     .text-center{text-align:center}.text-right{text-align:right}
     .uppercase{text-transform:uppercase}.normal-case{text-transform:none}
@@ -147,21 +150,22 @@
 <body>
 
 <!-- Splash screen -->
-<div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0B0D17 0%,#13152a 50%,#1a0f35 100%);transition:opacity .35s ease">
-  <div style="animation:splashIn .5s cubic-bezier(.22,1,.36,1) both">
-    <div style="width:88px;height:88px;border-radius:24px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 24px 56px rgba(99,102,241,0.4)">
-      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2"/>
-        <path d="M2 10h20"/>
-        <circle cx="16" cy="15" r="1" fill="#fff" stroke="none"/>
-      </svg>
+<div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(125% 80% at 50% 28%,#1b1340 0%,#0B0D17 58%);transition:opacity .4s ease">
+  <div style="animation:splashIn .6s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;align-items:center">
+    <div style="position:relative;margin-bottom:30px">
+      <div style="position:absolute;inset:-20px;border-radius:34px;background:radial-gradient(circle,rgba(109,74,255,0.45),transparent 70%);filter:blur(6px)"></div>
+      <div style="position:relative;width:94px;height:94px;border-radius:27px;background:linear-gradient(140deg,#6D4AFF,#A06BFF);display:flex;align-items:center;justify-content:center;box-shadow:0 22px 50px -12px rgba(109,74,255,0.6)">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="5" width="20" height="14" rx="2.5"/>
+          <path d="M2 10h20"/>
+          <circle cx="16" cy="15" r="1.1" fill="#fff" stroke="none"/>
+        </svg>
+      </div>
     </div>
-    <p style="color:#fff;font-size:28px;font-weight:800;letter-spacing:-0.5px;text-align:center;margin:0 0 6px;font-family:'Be Vietnam Pro',sans-serif">Chi Tiêu</p>
-    <p style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center;margin:0 0 48px;font-family:'Be Vietnam Pro',sans-serif">Quản lý tài chính cá nhân</p>
-    <div style="display:flex;gap:6px;justify-content:center">
-      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out infinite"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out .22s infinite"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:#6D5FD4;animation:splashDot 1.3s ease-in-out .44s infinite"></div>
+    <p style="color:#fff;font-size:30px;font-weight:800;letter-spacing:-0.6px;text-align:center;margin:0 0 6px">Chi Tiêu</p>
+    <p style="color:rgba(255,255,255,0.42);font-size:13px;text-align:center;margin:0 0 34px">Quản lý tài chính cá nhân</p>
+    <div style="width:128px;height:4px;border-radius:3px;background:rgba(255,255,255,0.10);overflow:hidden">
+      <div style="width:45%;height:100%;border-radius:3px;background:linear-gradient(90deg,#6D4AFF,#A06BFF);animation:splashBar 1.15s ease-in-out infinite"></div>
     </div>
   </div>
 </div>
@@ -212,7 +216,7 @@
         <p class="text-xs font-bold uppercase tracking-widest" style="color:#c7d2fe;letter-spacing:0.08em">Số dư khả dụng</p>
         <span class="text-xs font-bold px-3 py-1.5 rounded-full" style="background:rgba(255,255,255,0.16);color:#fff">Đối soát</span>
       </div>
-      <p class="text-white font-extrabold mb-3" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---đ</p>
+      <p class="text-white font-extrabold mb-3" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---</p>
       <div class="flex rounded-full overflow-hidden mb-2" style="height:9px;background:rgba(255,255,255,0.18)">
         <div id="bar-avail" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
         <div id="bar-other" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
@@ -350,14 +354,16 @@
     <h2 class="text-white font-bold text-xl">Công nợ</h2>
     <p id="debt-updated" class="text-gray-500 text-xs mt-0.5">Đang tải...</p>
   </div>
-  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(140deg,#101A2E,#15243F);border:1px solid rgba(47,212,155,0.18)">
+  <div class="mx-4 rounded-3xl p-5 relative overflow-hidden mb-5" style="background:linear-gradient(140deg,#0C1B26 0%,#102A24 100%);border:1px solid rgba(47,212,155,0.18)">
+    <div class="absolute rounded-full" style="top:-46px;right:-34px;width:190px;height:190px;background:radial-gradient(circle at 32% 32%,rgba(47,212,155,0.30),rgba(47,212,155,0.05) 62%,transparent 72%)"></div>
+    <div class="absolute rounded-full" style="bottom:-70px;left:-36px;width:210px;height:210px;background:radial-gradient(circle,rgba(47,212,155,0.10),transparent 70%)"></div>
     <div class="relative">
       <p id="debt-net-label" class="text-gray-400 text-xs uppercase tracking-widest mb-1">Tổng công nợ</p>
       <p id="debt-net" class="text-3xl font-extrabold text-emerald-400 mb-1">---</p>
       <p id="debt-net-sub" class="text-xs mb-4 text-gray-400">---</p>
       <div class="flex gap-3">
-        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)"><p class="text-emerald-400 text-xs mb-0.5">Họ nợ bạn</p><p id="debt-pos" class="text-emerald-400 font-bold text-sm">---</p></div>
-        <div class="flex-1 rounded-2xl p-3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)"><p class="text-red-400 text-xs mb-0.5">Bạn nợ họ</p><p id="debt-neg" class="text-red-400 font-bold text-sm">---</p></div>
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.07)"><p class="text-emerald-400 text-xs mb-0.5">Họ nợ bạn</p><p id="debt-pos" class="text-emerald-400 font-bold text-sm">---</p></div>
+        <div class="flex-1 rounded-2xl p-3" style="background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.07)"><p class="text-red-400 text-xs mb-0.5">Bạn nợ họ</p><p id="debt-neg" class="text-red-400 font-bold text-sm">---</p></div>
       </div>
     </div>
   </div>
@@ -658,7 +664,7 @@ function renderBalance(b) {
   const pending = b.pending || 0;   // + = họ nợ bạn (ròng), − = bạn nợ họ (ròng)
   const real = bal + pending;        // tài sản thực = khả dụng + công nợ ròng
   S.bookBalance = bal;
-  document.getElementById('card-total').textContent = (bal<0?'-':'')+fmt(bal)+'đ';
+  document.getElementById('card-total').textContent = (bal<0?'-':'')+fmt(bal);
 
   const barA = document.getElementById('bar-avail');
   const barO = document.getElementById('bar-other');
@@ -670,21 +676,21 @@ function renderBalance(b) {
   const cnSign  = pending > 0 ? '+' : pending < 0 ? '−' : '';
   barA.style.width = (absA/basis*100)+'%'; barA.style.background = '#c7d2fe';
   barO.style.width = (absP/basis*100)+'%'; barO.style.background = pending >= 0 ? '#34d399' : '#f87171';
-  document.getElementById('leg-avail').textContent = fmt(bal)+'đ';
+  document.getElementById('leg-avail').textContent = fmt(bal);
   document.getElementById('leg-dot').style.background = pending >= 0 ? '#34d399' : '#f87171';
   const legDebt = document.getElementById('leg-debt');
-  legDebt.textContent = cnSign+fmt(pending)+'đ';
+  legDebt.textContent = cnSign+fmt(pending);
   legDebt.style.color = cnColor;
 
   const realEl = document.getElementById('card-real');
-  realEl.textContent = (real<0?'-':'')+fmt(real)+'đ';
+  realEl.textContent = (real<0?'-':'')+fmt(real);
   realEl.style.color = real<0 ? '#f87171' : '#fff';
 }
 
 // ============ RECONCILE (đối soát) ============
 function openReconcile() {
   if(S.bookBalance===undefined) { showToast('Chưa tải được số dư','err'); return; }
-  document.getElementById('rec-book').textContent = (S.bookBalance<0?'-':'')+fmt(S.bookBalance)+'đ';
+  document.getElementById('rec-book').textContent = (S.bookBalance<0?'-':'')+fmt(S.bookBalance);
   document.getElementById('rec-cash').value='';
   document.getElementById('rec-bank').value='';
   document.getElementById('rec-result').classList.add('hidden');
@@ -702,13 +708,13 @@ function recCalc() {
 
   if(diff === 0) {
     result.style.background='rgba(16,185,129,0.12)';
-    result.innerHTML = `<p class="text-emerald-400 font-bold text-sm">✓ Sổ sách khớp thực tế</p><p class="text-gray-400 text-xs mt-1">Cộng thực tế: ${fmt(actual)}đ — không thiếu đồng nào 🎉</p>`;
+    result.innerHTML = `<p class="text-emerald-400 font-bold text-sm">✓ Sổ sách khớp thực tế</p><p class="text-gray-400 text-xs mt-1">Cộng thực tế: ${fmt(actual)} — không thiếu đồng nào 🎉</p>`;
   } else if(diff < 0) {
     result.style.background='rgba(239,68,68,0.12)';
-    result.innerHTML = `<p class="text-red-400 font-bold text-sm">⚠️ Lệch −${fmt(Math.abs(diff))}đ</p><p class="text-gray-400 text-xs mt-1">Thực tế (${fmt(actual)}đ) ÍT hơn sổ — có vẻ bạn quên ghi ~${fmt(Math.abs(diff))}đ chi tiêu</p>`;
+    result.innerHTML = `<p class="text-red-400 font-bold text-sm">⚠️ Lệch −${fmt(Math.abs(diff))}</p><p class="text-gray-400 text-xs mt-1">Thực tế (${fmt(actual)}) ÍT hơn sổ — có vẻ bạn quên ghi ~${fmt(Math.abs(diff))} chi tiêu</p>`;
   } else {
     result.style.background='rgba(245,158,11,0.12)';
-    result.innerHTML = `<p class="text-amber-400 font-bold text-sm">⚠️ Lệch +${fmt(diff)}đ</p><p class="text-gray-400 text-xs mt-1">Thực tế (${fmt(actual)}đ) NHIỀU hơn sổ — quên ghi thu nhập, hoặc ai trả nợ mà chưa tick Đã thu?</p>`;
+    result.innerHTML = `<p class="text-amber-400 font-bold text-sm">⚠️ Lệch +${fmt(diff)}</p><p class="text-gray-400 text-xs mt-1">Thực tế (${fmt(actual)}) NHIỀU hơn sổ — quên ghi thu nhập, hoặc ai trả nợ mà chưa tick Đã thu?</p>`;
   }
 }
 
@@ -730,8 +736,7 @@ function renderRows() {
   Object.keys(groups).forEach(date => {
     const items = groups[date];
     // Tổng ngày = chi tiêu thuần, không gộp thu nhập
-    const total = items.reduce((a,r)=>a+(r.category==='Thu nhập'?0:r.amount),0);
-    html += `<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2 mt-4">${date} <span class="float-right ${total>=0?'text-red-500':'text-emerald-500'}">${total<0?'+':''}${fmt(Math.abs(total))}đ</span></p>`;
+    html += `<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2 mt-4">${date}</p>`;
     html += `<div class="glass rounded-2xl px-4 mb-1">`;
     items.forEach(r => {
       const isIncome = r.category==='Thu nhập';
@@ -749,7 +754,7 @@ function renderRows() {
           <p class="text-white text-sm font-semibold truncate">${r.detail||'(trống)'}</p>
           <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${r.subcategory||r.category}</span></p>
         </div>
-        <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}đ</p>
+        <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}</p>
       </div>`;
     });
     html += `</div>`;
@@ -783,14 +788,14 @@ function renderDebts() {
   const totalNeg = owed.reduce((a,d)=>a+Math.abs(d.balance),0);
   const net = totalPos - totalNeg;
 
-  document.getElementById('debt-net').textContent = (net>0?'+':net<0?'-':'')+fmt(Math.abs(net))+'đ';
+  document.getElementById('debt-net').textContent = (net>0?'+':net<0?'-':'')+fmt(Math.abs(net));
   document.getElementById('debt-net').className = 'text-3xl font-extrabold mb-1 '+(net>0?'text-emerald-400':net<0?'text-red-400':'text-white');
   const subEl = document.getElementById('debt-net-sub');
-  if(net>0){ subEl.textContent='Họ đang nợ bạn '+fmt(net)+'đ ròng'; subEl.className='text-xs mb-4 text-emerald-400'; }
-  else if(net<0){ subEl.textContent='Bạn đang nợ họ '+fmt(Math.abs(net))+'đ ròng'; subEl.className='text-xs mb-4 text-red-400'; }
+  if(net>0){ subEl.textContent='Họ đang nợ bạn '+fmt(net)+' ròng'; subEl.className='text-xs mb-4 text-emerald-400'; }
+  else if(net<0){ subEl.textContent='Bạn đang nợ họ '+fmt(Math.abs(net))+' ròng'; subEl.className='text-xs mb-4 text-red-400'; }
   else{ subEl.textContent='Không có công nợ'; subEl.className='text-xs mb-4 text-gray-400'; }
-  document.getElementById('debt-pos').textContent = fmt(totalPos)+'đ';
-  document.getElementById('debt-neg').textContent = fmt(totalNeg)+'đ';
+  document.getElementById('debt-pos').textContent = fmt(totalPos);
+  document.getElementById('debt-neg').textContent = fmt(totalNeg);
 
   let html = '';
 
@@ -804,12 +809,12 @@ function renderDebts() {
       const gPos = d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);
       const gNeg = d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);
       const oweSub = gNeg > 0
-        ? `${fmt(gPos)}đ − ${fmt(gNeg)}đ đối trừ = ${fmt(d.balance)}đ`
+        ? `${fmt(gPos)} − ${fmt(gNeg)} đối trừ = ${fmt(d.balance)}`
         : `${d.rows.length} khoản chưa thu`;
       html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
         <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
         <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs truncate">${oweSub}</p></div>
-        <div class="text-right flex-shrink-0"><p class="text-emerald-400 font-bold">+${fmt(d.balance)}đ</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
+        <div class="text-right flex-shrink-0"><p class="text-emerald-400 font-bold">+${fmt(d.balance)}</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
       </div>`;
     });
     html += `</div>`;
@@ -824,8 +829,8 @@ function renderDebts() {
       const border = i<owed.length-1 ? 'border-b' : '';
       html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
         <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
-        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs">${(()=>{const gN=d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);const gP=d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);return gP>0?`${fmt(gN)}đ − ${fmt(gP)}đ đối trừ = ${fmt(Math.abs(d.balance))}đ còn`:`${fmt(Math.abs(d.balance))}đ còn nợ`;})()} </p></div>
-        <div class="text-right flex-shrink-0"><p class="text-red-400 font-bold">-${fmt(Math.abs(d.balance))}đ</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
+        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs">${(()=>{const gN=d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);const gP=d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);return gP>0?`${fmt(gN)} − ${fmt(gP)} đối trừ = ${fmt(Math.abs(d.balance))} còn`:`${fmt(Math.abs(d.balance))} còn nợ`;})()} </p></div>
+        <div class="text-right flex-shrink-0"><p class="text-red-400 font-bold">-${fmt(Math.abs(d.balance))}</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
       </div>`;
     });
     html += `</div>`;
@@ -851,7 +856,7 @@ function renderDebts() {
           <p class="text-white font-semibold text-sm truncate">${r.name} <span class="text-gray-500 font-normal">· ${r.detail||'(trống)'}</span></p>
           <p class="text-gray-500 text-xs">${r.date} → ${dirText} <span class="text-emerald-500">${r.collectedDate}</span></p>
         </div>
-        <span class="text-gray-400 font-bold text-sm flex-shrink-0">${fmt(Math.abs(r.amount))}đ</span>
+        <span class="text-gray-400 font-bold text-sm flex-shrink-0">${fmt(Math.abs(r.amount))}</span>
       </div>`;
     });
     html += `</div>`;
@@ -936,10 +941,38 @@ function renderStats(d, month, year, debts, prev) {
 
   const sLabel = surplus > 0 ? 'Còn dư' : surplus < 0 ? 'Thâm hụt' : 'Hòa vốn';
   const sCls   = surplus > 0 ? 'emerald' : surplus < 0 ? 'red' : 'gray';
-  const sVal   = (surplus > 0 ? '+' : surplus < 0 ? '−' : '') + fmt(surplus) + 'đ';
+  const sVal   = (surplus > 0 ? '+' : surplus < 0 ? '−' : '') + fmt(surplus);
 
   const debtList = (debts||[]).filter(x=>x.balance>0).sort((a,b)=>b.balance-a.balance);
   const totalDebt = debtList.reduce((a,x)=>a+x.balance,0);
+
+  // Block 0: 2 thẻ tổng (Tổng chi / Thu nhập) — theo bản Claude Design
+  const trendOnGrad = (delta) => {
+    if (delta === null) return `<p style="height:15px;margin-top:2px"></p>`;
+    if (delta === 0)    return `<p style="color:rgba(255,255,255,.78);font-size:11px;font-weight:600;margin-top:2px">— 0% so tháng trước</p>`;
+    return `<p style="color:rgba(255,255,255,.92);font-size:11px;font-weight:700;margin-top:2px">${delta > 0 ? '↑' : '↓'}${Math.abs(delta)}% so tháng trước</p>`;
+  };
+  const gExpense = prev ? trendOnGrad(pctDelta(expense, (prev.byPerson||{})[OWNER] || 0)) : `<p style="height:15px;margin-top:2px"></p>`;
+  const gIncome  = prev ? trendOnGrad(pctDelta(income,  prev.totalIncome || 0))           : `<p style="height:15px;margin-top:2px"></p>`;
+  // Auto-fit cỡ số: lấy chuỗi dài hơn để 2 thẻ luôn cùng cỡ (nhất quán, không tràn)
+  const eStr = fmt(expense), iStr = fmt(income);
+  const mLen = Math.max(eStr.length, iStr.length);
+  const numSize = mLen >= 13 ? '1.1rem' : mLen >= 11 ? '1.28rem' : '1.45rem';
+  const numStyle = `font-size:${numSize};font-weight:800;letter-spacing:-0.02em;line-height:1.12;white-space:nowrap`;
+  const summaryCards = `<div class="grid grid-cols-2 gap-3 mb-4">
+    <div class="rounded-2xl relative overflow-hidden" style="padding:16px 16px 14px;background:linear-gradient(140deg,#6D4AFF 0%,#8A5BFF 100%);box-shadow:0 14px 28px -14px rgba(109,74,255,.6)">
+      <div class="absolute -top-6 -right-6 w-24 h-24 rounded-full" style="background:rgba(255,255,255,0.08)"></div>
+      <p class="relative" style="color:rgba(255,255,255,.82);font-size:12px;font-weight:600;margin-bottom:4px">Tổng chi</p>
+      <p class="relative text-white" style="${numStyle}">${fmt(expense)}</p>
+      <div class="relative">${gExpense}</div>
+    </div>
+    <div class="rounded-2xl relative overflow-hidden" style="padding:16px 16px 14px;background:linear-gradient(140deg,#1FBF8A 0%,#2FD49B 100%);box-shadow:0 14px 28px -14px rgba(47,212,155,.55)">
+      <div class="absolute -top-6 -right-6 w-24 h-24 rounded-full" style="background:rgba(255,255,255,0.10)"></div>
+      <p class="relative" style="color:rgba(255,255,255,.88);font-size:12px;font-weight:600;margin-bottom:4px">Thu nhập</p>
+      <p class="relative text-white" style="${numStyle}">${fmt(income)}</p>
+      <div class="relative">${gIncome}</div>
+    </div>
+  </div>`;
 
   // Block 1: Dòng tiền
   const title = !month && !year ? 'tổng cộng' : !month ? ('năm ' + year) : ('Th' + month + '/' + year);
@@ -948,15 +981,15 @@ function renderStats(d, month, year, debts, prev) {
   const titleBlock = prevTxt
     ? `<p class="text-white font-semibold mb-1">Dòng tiền ${title}</p><p class="text-gray-500 text-xs mb-4">${prevTxt}</p>`
     : `<p class="text-white font-semibold mb-4">Dòng tiền ${title}</p>`;
-  let html = `<div class="glass rounded-2xl p-5 mb-4">${titleBlock}
-    <div class="grid grid-cols-3 gap-2 mb-4">
-      <div class="text-center"><p class="text-emerald-400 text-xs mb-1">Thu nhập</p><p class="text-white font-bold text-sm">${fmt(income)}đ</p>${dIncome}</div>
-      <div class="text-center"><p class="text-red-400 text-xs mb-1">Chi tiêu</p><p class="text-white font-bold text-sm">${fmt(expense)}đ</p>${dExpense}</div>
-      <div class="text-center"><p class="text-gray-400 text-xs mb-1">${sLabel}</p><p class="text-${sCls}-400 font-bold text-sm">${sVal}</p></div>
-    </div>`;
+  let html = summaryCards + `<div class="glass rounded-2xl p-5 mb-4">${titleBlock}
+    <div class="space-y-3 mb-1">
+      <div class="flex justify-between items-center"><span class="text-gray-400 text-sm">+ Thu nhập</span><span class="font-bold text-sm" style="color:#2FD49B">+${fmt(income)}</span></div>
+      <div class="flex justify-between items-center"><span class="text-gray-400 text-sm">− Chi tiêu</span><span class="font-bold text-sm" style="color:#FB6B7C">−${fmt(expense)}</span></div>
+    </div>
+    <div class="flex justify-between items-center" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:13px;padding-top:13px"><span class="text-white font-bold text-sm">${sLabel} tháng</span><span class="font-extrabold" style="font-size:1.1rem;letter-spacing:-0.02em;color:${surplus>0?'#A48BFF':surplus<0?'#FB6B7C':'#9ca3af'}">${surplus>0?'+':surplus<0?'−':''}${fmt(Math.abs(surplus))}</span></div>`;
   if (savePct !== null) {
     const barCls = savePct>=20?'bg-emerald-500':savePct>0?'bg-amber-400':'bg-red-500';
-    html += `<div class="flex items-center gap-3">
+    html += `<div class="flex items-center gap-3" style="margin-top:14px">
       <span class="text-gray-400 text-xs flex-shrink-0">Tiết kiệm</span>
       <div class="flex-1 prog-bg"><div class="prog-fill ${barCls}" style="width:${Math.min(100,savePct)}%"></div></div>
       <span class="text-gray-300 text-xs flex-shrink-0 w-8 text-right">${savePct}%</span>
@@ -969,18 +1002,52 @@ function renderStats(d, month, year, debts, prev) {
     const isCurrent = (y === now.getFullYear() && m === now.getMonth()+1);
     const daysElapsed = isCurrent ? now.getDate() : daysInMonth;
     const perDay = Math.round(expense / daysElapsed);
-    let txt = 'Chi TB ' + fmt(perDay) + 'đ/ngày';
-    if (isCurrent) txt += ' · đà này cuối tháng ~' + fmt(Math.round(perDay * daysInMonth)) + 'đ';
+    let txt = 'Chi TB ' + fmt(perDay) + '/ngày';
+    if (isCurrent) txt += ' · đà này cuối tháng ~' + fmt(Math.round(perDay * daysInMonth));
     html += `<div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:10px"><p class="text-gray-400 text-xs">${txt}</p></div>`;
   }
   html += `</div>`;
+
+  // Block 1.5: Chi tiêu 7 ngày qua — tính client-side từ S.rows (chi cá nhân của chủ app)
+  try {
+    const caSet = new Set(HM_CA_NHAN.map(h => h.name));
+    const now7 = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const dt = new Date(now7.getFullYear(), now7.getMonth(), now7.getDate() - i);
+      const dd = String(dt.getDate()).padStart(2, '0');
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      days.push({ key: dd + '/' + mm + '/' + dt.getFullYear(), label: dd, sum: 0 });
+    }
+    const dayMap = {}; days.forEach(d => dayMap[d.key] = d);
+    (S.rows || []).forEach(r => {
+      if (r.name === OWNER && r.amount > 0 && caSet.has(r.category) && dayMap[r.date]) dayMap[r.date].sum += r.amount;
+    });
+    if (days.some(d => d.sum > 0)) {
+      const maxSum = Math.max(...days.map(d => d.sum), 1);
+      let bars = '';
+      days.forEach((d, i) => {
+        const h = Math.max(Math.round(d.sum / maxSum * 100), 3);
+        const last = i === days.length - 1;
+        const bg = last ? 'linear-gradient(180deg,#A06BFF,#6D4AFF)' : 'rgba(109,74,255,0.42)';
+        bars += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%" title="${d.label}: ${fmt(d.sum)}">
+          <div style="width:62%;max-width:26px;height:${h}%;background:${bg};border-radius:7px 7px 4px 4px"></div>
+          <span style="font-size:11px;font-weight:${last ? '700' : '500'};color:${last ? '#A48BFF' : '#6b7280'}">${d.label}</span>
+        </div>`;
+      });
+      html += `<div class="glass rounded-2xl p-5 mb-4">
+        <p class="text-white font-semibold mb-4">Chi tiêu 7 ngày qua</p>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:130px">${bars}</div>
+      </div>`;
+    }
+  } catch (e) {}
 
   // Block 2: Công nợ cần thu
   if (debtList.length) {
     html += `<div class="glass rounded-2xl p-5 mb-4">
       <div class="flex items-center justify-between mb-1">
         <p class="text-white font-semibold">Công nợ cần thu</p>
-        <p class="text-emerald-400 font-bold text-sm">+${fmt(totalDebt)}đ</p>
+        <p class="text-emerald-400 font-bold text-sm">+${fmt(totalDebt)}</p>
       </div>
       <p class="text-gray-500 text-xs mb-4">${debtList.length} người · chưa thu về</p>
       <div class="space-y-3">`;
@@ -990,7 +1057,7 @@ function renderStats(d, month, year, debts, prev) {
       html += `<div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
         <span class="text-gray-200 text-sm flex-1">${x.name}</span>
-        <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}đ</span>
+        <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}</span>
       </div>`;
     });
     html += `</div></div>`;
@@ -1009,12 +1076,12 @@ function renderStats(d, month, year, debts, prev) {
 
   if (catsCaNhan.length) {
     const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);
-    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}đ</span></div><div class="space-y-3">`;
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}</span></div><div class="space-y-3">`;
     catsCaNhan.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalCaNhan*100);
       const emoji = catEmoji[name] || '📌';
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}đ</span></div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>`;
     });
     html += `</div></div>`;
@@ -1022,12 +1089,12 @@ function renderStats(d, month, year, debts, prev) {
 
   if (catsChoMuon.length) {
     const totalChoMuon = catsChoMuon.reduce((s,[,v])=>s+v, 0);
-    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}đ</span></div><div class="space-y-3">`;
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}</span></div><div class="space-y-3">`;
     catsChoMuon.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalChoMuon*100);
       const emoji = catEmoji[name] || '📌';
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}đ</span></div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>`;
     });
     html += `</div></div>`;
@@ -1220,7 +1287,7 @@ function calcSplit() {
   const box = document.getElementById('split-box');
   if(!total||!count){ box.innerHTML='<p class="text-indigo-400 text-sm font-semibold">Chọn người để tính</p>'; return; }
   const per = Math.ceil(total/count);
-  box.innerHTML=`<p class="text-indigo-400 text-sm font-semibold">${count} người · mỗi người <span class="text-white font-bold">${fmt(per)}đ</span></p>`;
+  box.innerHTML=`<p class="text-indigo-400 text-sm font-semibold">${count} người · mỗi người <span class="text-white font-bold">${fmt(per)}</span></p>`;
 }
 
 // ============ SUBMIT ============
@@ -1337,7 +1404,7 @@ function openTxDetail(r) {
   const _isInc = r.category==='Thu nhập', _isCho = r.category==='Cho mượn/ Ứng';
   const _sign = (_isInc || (_isCho && r.amount>0)) ? '+' : (_isCho && r.amount<0 ? '-' : '');
   const _col  = (_isInc || (_isCho && r.amount>0)) ? 'text-emerald-400' : 'text-red-400';
-  document.getElementById('bstx-amt').textContent  = _sign+fmt(Math.abs(r.amount))+'đ';
+  document.getElementById('bstx-amt').textContent  = _sign+fmt(Math.abs(r.amount));
   document.getElementById('bstx-amt').className    = 'font-bold text-lg flex-shrink-0 '+_col;
   document.getElementById('bstx-date').textContent = r.date;
   document.getElementById('bstx-cat').textContent  = r.category;
@@ -1429,7 +1496,7 @@ async function doQuickAdd() {
     const r = await api({action:'quickAdd', text:text});
     S.lastRowIndex = r.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
     inp.value='';
-    showToast(`✓ ${r.name} · ${r.subcategory||r.category} · ${fmt(r.amount)}đ`,'ok');
+    showToast(`✓ ${r.name} · ${r.subcategory||r.category} · ${fmt(r.amount)}`,'ok');
     loadHome();
   } catch(e) { showToast(e.message,'err'); }
   btn.style.opacity='1'; btn.style.pointerEvents='auto';
@@ -1518,8 +1585,8 @@ async function deleteTx(rowIndex, btn) {
 function openDebtSheet(d) {
   const isOwed = d.balance < 0;
   document.getElementById('bs-debt-desc').textContent = isOwed
-    ? `Bạn đang nợ ${d.name} ${fmt(Math.abs(d.balance))}đ. Xác nhận đã trả?`
-    : `${d.name} đang nợ bạn ${fmt(d.balance)}đ. Đánh dấu đã thu?`;
+    ? `Bạn đang nợ ${d.name} ${fmt(Math.abs(d.balance))}. Xác nhận đã trả?`
+    : `${d.name} đang nợ bạn ${fmt(d.balance)}. Đánh dấu đã thu?`;
   const rowsEl = document.getElementById('bs-debt-rows');
   rowsEl.innerHTML = d.rows.map(r => {
     const pos = r.amount > 0;
@@ -1530,7 +1597,7 @@ function openDebtSheet(d) {
         <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
         <p class="text-sm truncate" style="color:#d1d5db">${r.detail||'(trống)'}</p>
       </div>
-      <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}đ</span>
+      <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}</span>
     </div>`;
   }).join('');
   const btn = document.getElementById('bs-debt-btn');
@@ -1562,7 +1629,7 @@ function showToast(msg, type) {
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 
 function hideSplash() {
-  const delay = Math.max(0, 1400 - (Date.now() - _splashT));
+  const delay = Math.max(0, 900 - (Date.now() - _splashT));
   setTimeout(() => {
     const sp = document.getElementById('splash');
     if(sp) { sp.style.opacity='0'; setTimeout(()=>sp.remove(), 350); }
