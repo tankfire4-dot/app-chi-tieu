@@ -723,6 +723,9 @@ function recCalc() {
 function renderRows() {
   const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
   const filtered = S.rows.filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y);
+  // Map hạng mục → emoji (icon nhóm chi tiêu) — dùng cho avatar giao dịch
+  const EMO = {};
+  [...HM_CA_NHAN, ...HM_CHO_MUON, ...HM_THU].forEach(h => { const e = h.label.match(/^(\S+)\s/); if (e && e[1] !== h.name) EMO[h.name] = e[1]; });
 
   if(!filtered.length) {
     document.getElementById('tx-list').innerHTML = '<div class="text-center py-10"><p class="text-gray-500 text-sm mb-1">Chưa có giao dịch tháng này</p><p class="text-gray-400 text-xs">Bấm “Ghi chi tiêu” phía trên để thêm khoản đầu tiên</p></div>';
@@ -740,16 +743,14 @@ function renderRows() {
     html += `<div class="glass rounded-2xl px-4 mb-1">`;
     items.forEach(r => {
       const isIncome = r.category==='Thu nhập';
-      const initial = isIncome ? '💵' : (r.name ? r.name.trim().split(' ').pop()[0].toUpperCase() : '?');
-      const ci = r.name.length % AVATAR_COLORS.length;
-      const avatarCls = isIncome ? 'bg-emerald-900 text-emerald-300' : AVATAR_COLORS[ci];
       const isChoMuon = r.category === 'Cho mượn/ Ứng';
+      const emoji = EMO[r.subcategory] || (isIncome ? '💵' : isChoMuon ? '🤝' : '💸');
       const amtColor = (isIncome || (isChoMuon && r.amount > 0)) ? '#2FD49B' : '#FB6B7C';
       const amtSign  = (isIncome || (isChoMuon && r.amount > 0)) ? '+' : (isChoMuon && r.amount < 0 ? '-' : '');
       const collIcon = (r.category==='Cho mượn/ Ứng' && !r.collected && r.amount>0)
         ? '<span style="color:#f59e0b;font-size:12px;margin-left:4px;">●</span>' : '';
       html += `<div class="tx-row" onclick='openTxDetail(${JSON.stringify(r)})'>
-        <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:#A48BFF;">${initial}</div>
+        <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:21px;">${emoji}</div>
         <div class="flex-1 min-w-0">
           <p class="text-white text-sm font-semibold truncate">${r.detail||'(trống)'}</p>
           <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${r.subcategory||r.category}</span></p>
