@@ -516,7 +516,7 @@
     <div class="drag-pill"></div>
     <p class="text-white font-bold text-lg mb-1">Xác nhận đã thu / trả</p>
     <p id="bs-debt-desc" class="text-gray-400 text-sm mb-3"></p>
-    <div id="bs-debt-rows" class="glass rounded-2xl p-4 mb-4 space-y-2" style="overflow-y:auto;flex:1;min-height:0"></div>
+    <div id="bs-debt-rows" class="glass rounded-2xl px-4 py-1 mb-4" style="overflow-y:auto;flex:1;min-height:0"></div>
     <button id="bs-debt-btn" class="btn grad-btn-green mb-3" style="padding:14px;flex-shrink:0">Xác nhận</button>
     <button onclick="closeBs('bs-debt')" class="btn" style="padding:13px;background:rgba(255,255,255,0.07);color:#9ca3af;flex-shrink:0">Hủy</button>
   </div>
@@ -1589,11 +1589,12 @@ function openDebtSheet(d) {
     ? `Bạn đang nợ ${d.name} ${fmt(Math.abs(d.balance))}. Xác nhận đã trả?`
     : `${d.name} đang nợ bạn ${fmt(d.balance)}. Đánh dấu đã thu?`;
   const rowsEl = document.getElementById('bs-debt-rows');
-  rowsEl.innerHTML = d.rows.map(r => {
+  rowsEl.innerHTML = d.rows.map((r, i) => {
     const pos = r.amount > 0;
     const col = pos ? 'text-emerald-400' : 'text-red-400';
     const sign = pos ? '+' : '-';
-    return `<div class="flex justify-between items-start gap-2">
+    const border = i < d.rows.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.07);' : '';
+    return `<div class="flex justify-between items-start gap-2" style="padding:9px 0;${border}">
       <div class="flex-1 min-w-0">
         <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
         <p class="text-sm truncate" style="color:#d1d5db">${r.detail||'(trống)'}</p>
