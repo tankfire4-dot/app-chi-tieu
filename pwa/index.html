@@ -985,9 +985,9 @@ function renderStats(d, month, year, debts, prev) {
   </div>`;
 
   // Block 1: Dòng tiền
-  const title = !month && !year ? 'tổng cộng' : !month ? ('năm ' + year) : (month + '/' + year);
+  const title = !month && !year ? 'tổng cộng' : !month ? ('năm ' + year) : ('Tháng ' + month + '/' + year);
   let prevTxt = '';
-  if (prev && month && year) { let pm = parseInt(month)-1, py = parseInt(year); if (pm===0) { pm=12; py--; } prevTxt = 'So với ' + String(pm).padStart(2,'0') + '/' + py; }
+  if (prev && month && year) { let pm = parseInt(month)-1, py = parseInt(year); if (pm===0) { pm=12; py--; } prevTxt = 'So với Tháng ' + String(pm).padStart(2,'0') + '/' + py; }
   const titleBlock = prevTxt
     ? `<p class="text-white font-semibold mb-1">Dòng tiền ${title}</p><p class="text-gray-500 text-xs mb-4">${prevTxt}</p>`
     : `<p class="text-white font-semibold mb-4">Dòng tiền ${title}</p>`;
