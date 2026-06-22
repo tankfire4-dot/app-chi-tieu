@@ -1603,18 +1603,23 @@ function openDebtSheet(d) {
     const col = pos ? 'text-emerald-400' : 'text-red-400';
     const sign = pos ? '+' : '-';
     const border = i < d.rows.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.07);' : '';
-    return `<div class="flex justify-between items-start gap-2" style="padding:9px 0;${border}">
+    return `<label class="flex items-center gap-3" style="padding:9px 0;${border};cursor:pointer">
+      <input type="checkbox" class="debt-row-chk" data-idx="${r.rowIndex}" checked
+        style="width:18px;height:18px;accent-color:#2FD49B;flex-shrink:0;cursor:pointer">
       <div class="flex-1 min-w-0">
         <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
         <p class="text-sm truncate" style="color:#d1d5db">${r.detail||'(trống)'}</p>
       </div>
       <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}</span>
-    </div>`;
+    </label>`;
   }).join('');
   const btn = document.getElementById('bs-debt-btn');
   btn.textContent = isOwed ? 'Xác nhận đã trả ✓' : 'Đã thu rồi ✓';
-  const rowIdxs = d.rows.map(r=>r.rowIndex);
-  btn.onclick = ()=>markCollected(rowIdxs);
+  btn.onclick = () => {
+    const checked = [...document.querySelectorAll('.debt-row-chk:checked')].map(el => +el.dataset.idx);
+    if (!checked.length) { showToast('Chưa chọn khoản nào', 'err'); return; }
+    markCollected(checked);
+  };
   openBs('bs-debt');
 }
 
