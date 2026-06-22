@@ -1080,9 +1080,11 @@ function renderStats(d, month, year, debts, prev) {
     if(m && m[1] !== h.name) catEmoji[h.name] = m[1];
   });
   const caNhanNames  = new Set(HM_CA_NHAN.map(h => h.name));
-  const choMuonNames = new Set(HM_CHO_MUON.map(h => h.name));
   const catsCaNhan  = Object.entries(byCat).filter(([n,v])=>v>0 && caNhanNames.has(n)).sort((a,b)=>b[1]-a[1]);
-  const catsChoMuon = Object.entries(byCat).filter(([n,v])=>v>0 && choMuonNames.has(n)).sort((a,b)=>b[1]-a[1]);
+  // Cho mượn/Ứng = mọi hạng mục chi tiêu KHÔNG phải cá nhân (byCat đã loại Thu nhập ở backend).
+  // Lấy "không-phải-cá-nhân" thay vì đòi khớp đúng HM_CHO_MUON → hạng mục bị đổi tên/xóa khỏi
+  // config vẫn hiện, không âm thầm rơi mất khỏi biểu đồ (vẫn được tính vào tổng).
+  const catsChoMuon = Object.entries(byCat).filter(([n,v])=>v>0 && !caNhanNames.has(n)).sort((a,b)=>b[1]-a[1]);
 
   if (catsCaNhan.length) {
     const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);

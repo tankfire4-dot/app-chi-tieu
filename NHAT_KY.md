@@ -12,6 +12,35 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-22 — 3 sửa nhỏ phần Công nợ & Thống kê (tick từng khoản, format số, chống rơi hạng mục)
+
+**Vấn đề:** (1) Bấm "Đã thu rồi" đánh dấu CẢ CỤM khoản — nhưng thực tế người ta hay trả trước một
+phần (nợ 30 khoản, mới trả 15). (2) Chuỗi mô tả khoản chia bill ghi số liền `108000đ` thay vì
+`108.000`. (3) Khoa nghi biểu đồ Thống kê "thiếu hạng mục".
+
+**Quyết định:**
+1. **Tick từng dòng:** mỗi khoản trong sheet chi tiết công nợ có checkbox (mặc định tick hết); chỉ
+   khoản được tick mới `markCollected`. Không tick gì → báo lỗi.
+2. **Format số trong detail:** `Code.gs` thêm dấu chấm + bỏ "đ" khi sinh chuỗi (`addSplit`,
+   `addPaidBy`). Thêm `fmtDetail()` ở frontend áp vào 4 chỗ HIỂN THỊ → fix luôn dữ liệu CŨ đã lưu
+   trong Sheet (không sửa được từng dòng trong Sheet, nên fix lúc render).
+3. **Chống rơi hạng mục ở Thống kê:** nhóm "Cho mượn/Ứng" đổi từ "khớp đúng `HM_CHO_MUON`" sang
+   "mọi hạng mục KHÔNG phải cá nhân". Bỏ biến thừa `choMuonNames`.
+
+**Vì sao:** (3) là lỗi tiềm ẩn thật: biểu đồ tách Cá nhân/Cho mượn bằng cách so tên hạng mục với
+DANH SÁCH CONFIG. Hạng mục bị đổi tên / xóa khỏi tab `hang_muc` / lệch khoảng trắng sẽ khớp KHÔNG
+nhóm nào → âm thầm biến mất khỏi biểu đồ dù tiền vẫn cộng vào tổng. Lấy "phần bù của Cá nhân" làm
+nhóm Cho mượn → partition đầy đủ, không khoản nào rơi mất. Lưu ý: nếu config sạch thì hiển thị Y HỆT
+trước — đây là lưới an toàn, không phải thứ "thêm hạng mục"; nghĩa là nếu Khoa thấy ít hạng mục thì
+đúng là tháng đó chỉ chi vào bấy nhiêu hạng mục thật.
+
+**Bài học:** Biểu đồ chỉ liệt kê hạng mục CÓ chi tiêu trong tháng, sắp xếp giảm dần, KHÔNG cap số
+lượng (khác với block "Công nợ cần thu" cố tình `slice(0,4)`). `Code.gs` trong repo đã sửa nhưng
+Apps Script chạy bản dán tay → lần mở Apps Script tiếp theo phải dán lại `pwa/Code.gs` mới có format
+số cho dữ liệu MỚI (dữ liệu cũ đã được `fmtDetail` lo khi hiển thị).
+
+---
+
 ## 2026-06-22 — Lập mô hình "sếp–nhân viên" & dọn di sản khỏi repo
 
 **Vấn đề:** Khoa giải thích lý do sâu xa của việc viết CLAUDE.md/NHAT_KY.md: Khoa học kinh tế, không
