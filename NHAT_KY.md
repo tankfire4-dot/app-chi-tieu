@@ -37,6 +37,14 @@ từ `getStats`).
 **Bài học:** Phân loại dữ liệu phải dựa trên TRƯỜNG dữ liệu có cấu trúc (cột Phân loại), KHÔNG suy ra
 từ chuỗi người dùng tự gõ. Bản v43 ("không-phải-cá-nhân") chỉ chữa phần ngọn và bị thay bởi bản này.
 
+**Nối tiếp (v45 — icon hạng mục):** Sau khi tách đúng ô, icon hạng mục lại toàn hiện 📌 (gim). Lý do
+y hệt gốc trên: tên hạng mục trong DỮ LIỆU lệch tên trong CONFIG (vd config "Mua sắm, đồ dùng" / dữ
+liệu "Tiền mua sắm, đồ dùng cá nhân"; config "Đi lại, đổ xăng" / dữ liệu "…cơ bản") nên tra emoji
+đòi-khớp-đúng-tên bị trượt. Sửa: hàm `statEmoji(tên, danh_sách_nhóm)` chọn hạng mục config **trùng
+NHIỀU TỪ nhất** trong đúng nhóm (Cá nhân/Cho mượn) → chịu được thừa/thiếu chữ. Đã test 9 tên thật:
+tra đúng 100% (kể cả "Giải trí, cf, ăn uống bạn bè" → ☕). Bài học: khi đối chiếu tên do người dùng
+tự gõ, dùng **so trùng từ** thay vì so bằng tuyệt đối.
+
 ---
 
 ## 2026-06-22 — 3 sửa nhỏ phần Công nợ & Thống kê (tick từng khoản, format số, chống rơi hạng mục)

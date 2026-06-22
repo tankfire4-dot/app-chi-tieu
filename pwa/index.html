@@ -1077,11 +1077,6 @@ function renderStats(d, month, year, debts, prev, statRows) {
   }
 
   // Block 3: Theo hạng mục — tách Cá nhân và Cho mượn/Ứng
-  const catEmoji = {};
-  [...HM_CA_NHAN, ...HM_CHO_MUON].forEach(h => {
-    const m = h.label.match(/^(\S+)\s/);
-    if(m && m[1] !== h.name) catEmoji[h.name] = m[1];
-  });
   // Tách Cá nhân vs Cho mượn/Ứng theo CỘT PHÂN LOẠI thật (r.category) của từng dòng, KHÔNG đoán
   // qua tên hạng mục. Tên trong dữ liệu hay lệch danh sách config (đổi tên, thêm chữ "Tiền…",
   // thiếu khoảng trắng) nên đoán theo tên sẽ xếp nhầm ô hoặc rơi mất. Gom theo hạng mục, cộng mọi
@@ -1100,7 +1095,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
     html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}</span></div><div class="space-y-3">`;
     catsCaNhan.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalCaNhan*100);
-      const emoji = catEmoji[name] || '📌';
+      const emoji = statEmoji(name, HM_CA_NHAN);
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
         <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>`;
@@ -1113,7 +1108,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
     html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}</span></div><div class="space-y-3">`;
     catsChoMuon.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalChoMuon*100);
-      const emoji = catEmoji[name] || '📌';
+      const emoji = statEmoji(name, HM_CHO_MUON);
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
         <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>`;
@@ -1655,6 +1650,24 @@ function showToast(msg, type) {
 // ============ FORMAT ============
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function fmtDetail(s) { return (s||'').replace(/(\d{4,})đ/g, n => n.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.')); }
+
+// Tra emoji cho 1 tên hạng mục (lấy từ dữ liệu — có thể lệch tên config) trong ĐÚNG nhóm: chọn hạng
+// mục config trùng NHIỀU TỪ nhất (chịu được thừa/thiếu chữ như "Tiền …", "… cơ bản"). Không khớp → 📌.
+function statEmoji(name, list) {
+  const toks = s => (s||'').toLowerCase().split(/[^0-9a-zà-ỹ]+/).filter(w => w.length > 1);
+  const target = new Set(toks(name));
+  if (!target.size) return '📌';
+  let best = null, bestScore = 0;
+  (list||[]).forEach(h => {
+    let score = 0; toks(h.name).forEach(w => { if (target.has(w)) score++; });
+    if (score > bestScore) { bestScore = score; best = h; }
+  });
+  if (best && bestScore >= 1) {
+    const m = best.label.match(/^(\S+)\s/);
+    if (m && m[1] !== best.name) return m[1];
+  }
+  return '📌';
+}
 
 function hideSplash() {
   const delay = Math.max(0, 900 - (Date.now() - _splashT));
