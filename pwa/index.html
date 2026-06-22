@@ -908,6 +908,9 @@ async function loadStats() {
   const month = mSel.value;
   const p  = {action:'getStats', month, year};
   const pd = {action:'getDebts'};
+  // Lấy các dòng đúng kỳ để tách Cá nhân/Cho mượn theo phân loại thật (xem renderStats).
+  // "Tất cả năm" (không tháng/năm) → backend trả gần nhất, xin nhiều hơn (tối đa 500).
+  const pr = (!month && !year) ? {action:'getRows', limit:'500'} : {action:'getRows', month, year};
   // Tháng trước để so sánh (chỉ khi chọn 1 tháng cụ thể)
   let pPrev = null;
   if (month && year) {
@@ -917,22 +920,23 @@ async function loadStats() {
   }
   const cached  = cacheGet(p);
   const cachedD = cacheGet(pd);
+  const cachedR = cacheGet(pr);
   const debts0  = cachedD ? cachedD.debts : S.debts;
-  if (cached) { renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null); }
+  if (cached) { renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null, cachedR?cachedR.rows:[]); }
   else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
   try {
-    const [d, dd, dprev] = await Promise.all([
+    const [d, dd, dprev, dr] = await Promise.all([
       api(p),
       api(pd).catch(()=>({debts:debts0})),
-      pPrev ? api(pPrev).catch(()=>null) : Promise.resolve(null)
+      pPrev ? api(pPrev).catch(()=>null) : Promise.resolve(null),
+      api(pr).catch(()=>({rows:[]}))
     ]);
-    renderStats(d, month, year, dd.debts || [], dprev);
+    renderStats(d, month, year, dd.debts || [], dprev, dr.rows || []);
   } catch(e) { if(!cached) showToast('Lỗi tải thống kê','err'); }
 }
 
-function renderStats(d, month, year, debts, prev) {
+function renderStats(d, month, year, debts, prev, statRows) {
   const byPerson = d.byPerson || {};
-  const byCat    = d.byCategory || {};
   const income   = d.totalIncome || 0;          // thu nhập thật (Lương/Thưởng…)
   const expense  = byPerson[OWNER] || 0;        // chi tiêu cá nhân (chỉ của chủ app)
   const surplus  = income - expense;            // + = còn dư, − = thâm hụt
@@ -1020,7 +1024,6 @@ function renderStats(d, month, year, debts, prev) {
 
   // Block 1.5: Chi tiêu 7 ngày qua — tính client-side từ S.rows (chi cá nhân của chủ app)
   try {
-    const caSet = new Set(HM_CA_NHAN.map(h => h.name));
     const now7 = new Date();
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -1031,7 +1034,7 @@ function renderStats(d, month, year, debts, prev) {
     }
     const dayMap = {}; days.forEach(d => dayMap[d.key] = d);
     (S.rows || []).forEach(r => {
-      if (r.name === OWNER && r.amount > 0 && caSet.has(r.category) && dayMap[r.date]) dayMap[r.date].sum += r.amount;
+      if (r.name === OWNER && r.amount > 0 && r.category === 'Cá nhân' && dayMap[r.date]) dayMap[r.date].sum += r.amount;
     });
     if (days.some(d => d.sum > 0)) {
       const maxSum = Math.max(...days.map(d => d.sum), 1);
@@ -1079,12 +1082,18 @@ function renderStats(d, month, year, debts, prev) {
     const m = h.label.match(/^(\S+)\s/);
     if(m && m[1] !== h.name) catEmoji[h.name] = m[1];
   });
-  const caNhanNames  = new Set(HM_CA_NHAN.map(h => h.name));
-  const catsCaNhan  = Object.entries(byCat).filter(([n,v])=>v>0 && caNhanNames.has(n)).sort((a,b)=>b[1]-a[1]);
-  // Cho mượn/Ứng = mọi hạng mục chi tiêu KHÔNG phải cá nhân (byCat đã loại Thu nhập ở backend).
-  // Lấy "không-phải-cá-nhân" thay vì đòi khớp đúng HM_CHO_MUON → hạng mục bị đổi tên/xóa khỏi
-  // config vẫn hiện, không âm thầm rơi mất khỏi biểu đồ (vẫn được tính vào tổng).
-  const catsChoMuon = Object.entries(byCat).filter(([n,v])=>v>0 && !caNhanNames.has(n)).sort((a,b)=>b[1]-a[1]);
+  // Tách Cá nhân vs Cho mượn/Ứng theo CỘT PHÂN LOẠI thật (r.category) của từng dòng, KHÔNG đoán
+  // qua tên hạng mục. Tên trong dữ liệu hay lệch danh sách config (đổi tên, thêm chữ "Tiền…",
+  // thiếu khoảng trắng) nên đoán theo tên sẽ xếp nhầm ô hoặc rơi mất. Gom theo hạng mục, cộng mọi
+  // dấu, rồi chỉ hiện hạng mục có tổng > 0. statRows = các dòng đúng kỳ đang xem (xem loadStats).
+  const caMap = {}, cmMap = {};
+  (statRows||[]).forEach(r => {
+    if (r.category === 'Thu nhập' || !r.subcategory) return;
+    const bucket = r.category === 'Cá nhân' ? caMap : cmMap;
+    bucket[r.subcategory] = (bucket[r.subcategory] || 0) + r.amount;
+  });
+  const catsCaNhan  = Object.entries(caMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const catsChoMuon = Object.entries(cmMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
   if (catsCaNhan.length) {
     const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);

@@ -12,6 +12,33 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-22 — Thống kê: tách Cá nhân/Cho mượn theo CỘT PHÂN LOẠI (sửa tận gốc) + bật lại biểu đồ 7 ngày
+
+**Vấn đề:** Sau bản v43, mấy hạng mục cá nhân của Khoa (Tiền trọ/điện nước sinh hoạt, Đi lại đổ xăng
+cơ bản, Học tập, Tiền mua sắm, Tiền gym, Giải trí…) lại "nhảy" sang ô **Cho mượn/Ứng** — sai ô.
+Gốc: TÊN hạng mục trong dữ liệu lệch danh sách config (thêm chữ "Tiền…", "…sinh hoạt", thiếu khoảng
+trắng) nên mọi cách so-theo-tên đều xếp nhầm.
+
+**Quyết định:**
+1. **Bỏ hẳn việc đoán theo tên.** Màn Thống kê lấy thêm các DÒNG đúng kỳ đang xem (`getRows` theo
+   tháng/năm; "Tất cả năm" → xin tối đa 500 dòng gần nhất), rồi tách 2 nhóm theo **cột Phân loại
+   thật** (`r.category`: "Cá nhân" vs "Cho mượn/ Ứng"), gom theo hạng mục. Không phụ thuộc danh sách
+   config nữa → không thể xếp nhầm/rơi mất.
+2. **Bật lại biểu đồ "Chi tiêu 7 ngày qua".** Điều kiện cũ `caSet.has(r.category)` so Phân loại với
+   tên hạng mục → LUÔN sai → biểu đồ chưa từng hiện. Sửa thành `r.category === 'Cá nhân'`.
+3. Bỏ `byCat`/`caNhanNames`/`caSet` (không còn dùng).
+
+**Vì sao:** Cột Phân loại là NGUỒN SỰ THẬT do chính app ghi lúc nhập (chủ app→Cá nhân, người khác→Cho
+mượn). Tên hạng mục thì người dùng tự đặt, hay lệch — lấy nó làm khóa phân loại là sai về bản chất.
+Cách mới chạy NGAY, **không cần dán lại Code.gs** (backend `getStats`/`getRows` giữ nguyên). Lưu ý:
+"Tất cả năm" với >500 giao dịch thì phần bóc tách lấy 500 dòng gần nhất (tổng dòng tiền vẫn đủ vì lấy
+từ `getStats`).
+
+**Bài học:** Phân loại dữ liệu phải dựa trên TRƯỜNG dữ liệu có cấu trúc (cột Phân loại), KHÔNG suy ra
+từ chuỗi người dùng tự gõ. Bản v43 ("không-phải-cá-nhân") chỉ chữa phần ngọn và bị thay bởi bản này.
+
+---
+
 ## 2026-06-22 — 3 sửa nhỏ phần Công nợ & Thống kê (tick từng khoản, format số, chống rơi hạng mục)
 
 **Vấn đề:** (1) Bấm "Đã thu rồi" đánh dấu CẢ CỤM khoản — nhưng thực tế người ta hay trả trước một
