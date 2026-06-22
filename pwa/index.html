@@ -761,7 +761,7 @@ function renderRows() {
       html += `<div class="tx-row" onclick='openTxDetail(${JSON.stringify(r)})'>
         <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:21px;">${emoji}</div>
         <div class="flex-1 min-w-0">
-          <p class="text-white text-sm font-semibold truncate">${r.detail||'(trống)'}</p>
+          <p class="text-white text-sm font-semibold truncate">${fmtDetail(r.detail)||'(trống)'}</p>
           <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${r.subcategory||r.category}</span></p>
         </div>
         <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}</p>
@@ -863,7 +863,7 @@ function renderDebts() {
       html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06)">
         <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}" style="opacity:.7">${initial}</div>
         <div class="flex-1 min-w-0">
-          <p class="text-white font-semibold text-sm truncate">${r.name} <span class="text-gray-500 font-normal">· ${r.detail||'(trống)'}</span></p>
+          <p class="text-white font-semibold text-sm truncate">${r.name} <span class="text-gray-500 font-normal">· ${fmtDetail(r.detail)||'(trống)'}</span></p>
           <p class="text-gray-500 text-xs">${r.date} → ${dirText} <span class="text-emerald-500">${r.collectedDate}</span></p>
         </div>
         <span class="text-gray-400 font-bold text-sm flex-shrink-0">${fmt(Math.abs(r.amount))}</span>
@@ -1409,7 +1409,7 @@ function closeBs(id) { document.getElementById(id).classList.remove('open'); }
 function openTxDetail(r) {
   S.curTx = r;
   document.getElementById('bstx-av').textContent = r.name.trim().split(' ').pop()[0].toUpperCase();
-  document.getElementById('bstx-title').textContent = r.detail || '(trống)';
+  document.getElementById('bstx-title').textContent = fmtDetail(r.detail) || '(trống)';
   document.getElementById('bstx-sub').textContent  = r.name+' · '+r.date;
   const _isInc = r.category==='Thu nhập', _isCho = r.category==='Cho mượn/ Ứng';
   const _sign = (_isInc || (_isCho && r.amount>0)) ? '+' : (_isCho && r.amount<0 ? '-' : '');
@@ -1608,7 +1608,7 @@ function openDebtSheet(d) {
         style="width:18px;height:18px;accent-color:#2FD49B;flex-shrink:0;cursor:pointer">
       <div class="flex-1 min-w-0">
         <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
-        <p class="text-sm truncate" style="color:#d1d5db">${r.detail||'(trống)'}</p>
+        <p class="text-sm truncate" style="color:#d1d5db">${fmtDetail(r.detail)||'(trống)'}</p>
       </div>
       <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}</span>
     </label>`;
@@ -1643,6 +1643,7 @@ function showToast(msg, type) {
 
 // ============ FORMAT ============
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function fmtDetail(s) { return (s||'').replace(/(\d{4,})đ/g, n => n.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.')); }
 
 function hideSplash() {
   const delay = Math.max(0, 900 - (Date.now() - _splashT));

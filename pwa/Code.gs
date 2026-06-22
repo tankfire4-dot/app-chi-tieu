@@ -418,7 +418,7 @@ function doGet(e) {
 
         var sheet    = getSheet();
         var firstRow = sheet.getLastRow() + 1;
-        var chiTiet  = detail + " (tổng " + amount + "đ / " + people.length + " người)";
+        var chiTiet  = detail + " (tổng " + String(amount).replace(/\B(?=(\d{3})+(?!\d))/g,'.') + " / " + people.length + " người)";
 
         people.forEach(function(name, i) {
           var isOwner = name === owner;
@@ -452,7 +452,7 @@ function doGet(e) {
 
         var sheet    = getSheet();
         var firstRow = sheet.getLastRow() + 1;
-        var chiTiet  = detail + " (tổng " + amount + "đ / " + payer + " trả hộ)";
+        var chiTiet  = detail + " (tổng " + String(amount).replace(/\B(?=(\d{3})+(?!\d))/g,'.') + " / " + payer + " trả hộ)";
 
         sheet.appendRow([today(), owner, "Cá nhân",       hmCN, chiTiet,  halfOwner, true]);
         sheet.appendRow([today(), payer, "Cho mượn/ Ứng", hmCM, chiTiet, -halfPayer, false]);
