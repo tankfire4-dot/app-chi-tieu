@@ -1651,22 +1651,26 @@ function showToast(msg, type) {
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function fmtDetail(s) { return (s||'').replace(/(\d{4,})đ/g, n => n.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.')); }
 
-// Tra emoji cho 1 tên hạng mục (lấy từ dữ liệu — có thể lệch tên config) trong ĐÚNG nhóm: chọn hạng
-// mục config trùng NHIỀU TỪ nhất (chịu được thừa/thiếu chữ như "Tiền …", "… cơ bản"). Không khớp → 📌.
+// Tra emoji cho 1 tên hạng mục (lấy từ dữ liệu — có thể lệch tên config): chọn hạng mục config trùng
+// NHIỀU TỪ nhất (chịu được thừa/thiếu chữ như "Tiền …", "… cơ bản"). Ưu tiên dò trong ĐÚNG nhóm; nếu
+// không thấy (vd dòng Cho mượn ghi hạng mục "Tiền ăn" của nhóm Cá nhân) thì dò TOÀN BỘ. Bí → 📌.
 function statEmoji(name, list) {
   const toks = s => (s||'').toLowerCase().split(/[^0-9a-zà-ỹ]+/).filter(w => w.length > 1);
   const target = new Set(toks(name));
   if (!target.size) return '📌';
-  let best = null, bestScore = 0;
-  (list||[]).forEach(h => {
-    let score = 0; toks(h.name).forEach(w => { if (target.has(w)) score++; });
-    if (score > bestScore) { bestScore = score; best = h; }
-  });
-  if (best && bestScore >= 1) {
-    const m = best.label.match(/^(\S+)\s/);
-    if (m && m[1] !== best.name) return m[1];
-  }
-  return '📌';
+  const pick = arr => {
+    let best = null, bestScore = 0;
+    (arr||[]).forEach(h => {
+      let score = 0; toks(h.name).forEach(w => { if (target.has(w)) score++; });
+      if (score > bestScore) { bestScore = score; best = h; }
+    });
+    if (best && bestScore >= 1) {
+      const m = best.label.match(/^(\S+)\s/);
+      if (m && m[1] !== best.name) return m[1];
+    }
+    return null;
+  };
+  return pick(list) || pick([...HM_CA_NHAN, ...HM_CHO_MUON, ...HM_THU]) || '📌';
 }
 
 function hideSplash() {
