@@ -12,6 +12,32 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-22 — Lập mô hình "sếp–nhân viên" & dọn di sản khỏi repo
+
+**Vấn đề:** Khoa giải thích lý do sâu xa của việc viết CLAUDE.md/NHAT_KY.md: Khoa học kinh tế, không
+biết code, nhưng muốn *hiểu cái mình làm ra* và *nắm cốt lõi cách Claude hoạt động* — như một người
+sếp biết năng lực nhân viên. Đồng thời nhờ kiểm tra & dọn các repo trên máy.
+
+**Quyết định:**
+1. Chốt **nguyên tắc làm việc** vào CLAUDE.md: việc dọn dẹp/sửa lỗi hợp lý thì Claude cứ chủ động làm,
+   không hỏi vặt, ĐỔI LẠI phải ghi "làm gì + vì sao" vào NHAT_KY.md. Repo chưa đủ context thì chỉ
+   kiểm tra + báo cáo, không tự sửa.
+2. **Khảo sát 4 repo trên máy:** `app_chi_tieu` (đang làm), `lehai-tools`, `Company_OS`,
+   `fb-auto-post`. Ba repo sau đều sạch & đã push, RIÊNG `fb-auto-post` đang sửa dở 1 file
+   (`src/main.action.js`) → **không đụng** (việc dở của dự án khác).
+3. **Dọn `app_chi_tieu`:** gỡ `demo_ui.html`, `apps_script/` (bot Telegram cũ), `flutter_app/` (12
+   file Flutter bỏ dở) — đã grep xác nhận `pwa/` không tham chiếu gì tới chúng.
+
+**Vì sao:** Repo này giờ thuần PWA; giữ đám di sản chỉ làm rối người đọc (nhất là người không rành
+code muốn nắm cốt lõi). Git history vẫn lưu vĩnh viễn nên gỡ là **không mất gì** — khôi phục bằng
+`git log`/`git checkout` bất cứ lúc nào. Không tự sửa repo khác vì sửa ẩu khi thiếu context dễ làm
+hỏng dự án của Khoa — rủi ro lớn hơn lợi ích của việc "dọn cho gọn".
+
+**Bài học:** Tài liệu md không phải thủ tục hành chính mà là **giao diện để sếp giám sát & học** —
+nên ưu tiên kể "vì sao" dễ hiểu hơn là liệt kê kỹ thuật. Mỗi việc tự quyết → 1 dòng mạch lạc ở đây.
+
+---
+
 ## 2026-06-22 — Dọn Netlify, chốt GitHub Pages là nguồn duy nhất, lập tài liệu
 
 **Vấn đề:** Repo còn dấu vết Netlify (`netlify.toml`, folder `.netlify`) dù app đã chuyển sang GitHub

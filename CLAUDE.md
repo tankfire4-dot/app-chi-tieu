@@ -7,6 +7,12 @@
 - Đưa khuyến nghị rõ ràng, không liệt kê options trung lập.
 - **Quy tắc vàng:** chỉ thay GIAO DIỆN, **không phá logic JS / chức năng đã hoàn thiện**. Khi áp
   thiết kế từ ngoài (vd Claude Design): tách "visual thuần (an toàn)" vs "cấu trúc (phải kiểm)".
+- **Mô hình sếp–nhân viên:** Khoa học kinh tế, KHÔNG code, nhưng muốn *hiểu cái mình làm ra* và
+  *nắm cốt lõi cách Claude hoạt động*. → Những việc dọn dẹp / sửa lỗi hợp lý thì **cứ chủ động làm**,
+  KHÔNG cần hỏi từng cái nhỏ; đổi lại **bắt buộc ghi lại "làm gì + vì sao" vào `NHAT_KY.md`** (và cập
+  nhật `CLAUDE.md` nếu đổi cấu trúc/quy ước). Tài liệu md = cách Khoa giám sát và học, không phải thủ tục.
+- **Repo người khác/dự án khác trên máy:** chỉ sửa repo đang có đủ context; repo khác (lehai-tools,
+  Company_OS, fb-auto-post...) thì **kiểm tra + báo cáo**, KHÔNG tự sửa source khi chưa nắm rõ.
 
 ## Tài liệu
 
@@ -29,15 +35,16 @@ app_chi_tieu/
 ├── CLAUDE.md
 ├── NHAT_KY.md
 ├── deploy.ps1            ← deploy: copy pwa/* → force-push nhánh gh-pages
-├── pwa/
-│   ├── index.html        ← TOÀN BỘ frontend (HTML + CSS + JS trong 1 file, vanilla, dark theme)
-│   ├── Code.gs           ← backend Google Apps Script (mỗi user tự deploy bản riêng)
-│   ├── sw.js             ← service worker, cache "chi-tieu-vNN"
-│   ├── manifest.json     ← PWA manifest (icon, theme tối, maskable)
-│   └── icon-192/512.png  ← logo (ví tím gradient, full-bleed maskable)
-├── flutter_app/          ← DI SẢN, không dùng
-└── apps_script/          ← DI SẢN bot Telegram cũ, không dùng
+└── pwa/
+    ├── index.html        ← TOÀN BỘ frontend (HTML + CSS + JS trong 1 file, vanilla, dark theme)
+    ├── Code.gs           ← backend Google Apps Script (mỗi user tự deploy bản riêng)
+    ├── sw.js             ← service worker, cache "chi-tieu-vNN"
+    ├── manifest.json     ← PWA manifest (icon, theme tối, maskable)
+    └── icon-192/512.png  ← logo (ví tím gradient, full-bleed maskable)
 ```
+
+> Bản Flutter cũ (`flutter_app/`) và bot Telegram cũ (`apps_script/`) đã gỡ ngày 2026-06-22 — vẫn
+> nằm trong git history nếu cần xem lại (xem [NHAT_KY.md](NHAT_KY.md)).
 
 **Frontend** (`pwa/index.html`): JS render mọi thứ lúc chạy (đưa URL app cho công cụ không chạy JS
 sẽ chỉ thấy vỏ trống). Font **Plus Jakarta Sans**. Hàm render then chốt ghi thẳng vào DOM cố định:

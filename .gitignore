@@ -4,9 +4,3 @@
 # Dev tools
 pwa/generate-icon.html
 node_modules/
-
-# Flutter build artifacts
-flutter_app/build/
-flutter_app/.dart_tool/
-flutter_app/.flutter-plugins
-flutter_app/.flutter-plugins-dependencies
