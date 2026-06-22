@@ -12,6 +12,32 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-23 — Chuẩn hóa tên hạng mục trong dữ liệu cũ (script chạy một lần)
+
+**Vấn đề:** Gốc của loạt lỗi xếp-ô/icon hôm trước là tên hạng mục trong DỮ LIỆU (`to_nhap_lieu`) lệch
+danh sách chuẩn (`hang_muc`) — vd dữ liệu "Tiền mua sắm, đồ dùng cá nhân" vs chuẩn "Mua sắm, đồ dùng";
+còn có 2 tên cho cùng 1 thứ ("Gym, thể thao, TPBS" và "Tiền gym, thể thao, TPBS"). App đã được làm
+"chịu lệch" (tách theo cột Phân loại + tra icon theo độ trùng từ), nhưng Khoa muốn dọn DỮ LIỆU cho
+sạch hẳn — cần cho dài hạn.
+
+**Quyết định:** Viết `tools/chuan-hoa-hang-muc.gs` — script Apps Script chạy MỘT LẦN, hướng chuẩn hóa
+= **sửa dữ liệu cũ cho khớp `hang_muc`** (vì `hang_muc` là danh sách app dùng tạo chip nhập; dữ liệu
+mới đã tự khớp). Quy trình AN TOÀN 2 bước: `xemTruocChuanHoa()` ghi đề xuất "tên cũ → tên mới" vào
+tab tạm `_xem_truoc_chuan_hoa` để Khoa DUYỆT; ưng mới chạy `apDungChuanHoa()`. Khớp bằng độ-trùng-từ
+TRONG CÙNG phân loại, chỉ đổi khi trùng ≥ nửa số từ của tên chuẩn; tên lạ không hợp → giữ nguyên.
+Chỉ đụng cột Hạng mục, không đụng số tiền/phân loại/công nợ.
+
+**Vì sao:** Sửa dữ liệu thật là việc khó lùi → bắt buộc có bước xem-trước + nhắc Khoa rằng Google
+Sheet có "Lịch sử phiên bản" để hoàn tác. Hướng dữ-liệu→chuẩn là điểm hội tụ tự nhiên (gộp luôn tên
+trùng). Script chạy bằng SHEET_ID/TAB_* sẵn có trong Code.gs nên chỉ cần dán vào cùng project.
+
+**Bài học:** Đây là hệ quả của việc data lưu hạng mục bằng CHUỖI (không phải ID) → đổi tên ở config
+là lệch ngay. App đã "chịu lệch" để luôn hiển thị đúng, nhưng muốn data sạch thì thi thoảng chạy lại
+script chuẩn hóa này sau khi đổi tên hạng mục. File để trong `tools/` (thư mục này tái xuất hiện chỉ
+để chứa công cụ ops chạy tay, KHÔNG deploy lên app).
+
+---
+
 ## 2026-06-22 — Thống kê: tách Cá nhân/Cho mượn theo CỘT PHÂN LOẠI (sửa tận gốc) + bật lại biểu đồ 7 ngày
 
 **Vấn đề:** Sau bản v43, mấy hạng mục cá nhân của Khoa (Tiền trọ/điện nước sinh hoạt, Đi lại đổ xăng
