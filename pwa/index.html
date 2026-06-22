@@ -998,10 +998,10 @@ function renderStats(d, month, year, debts, prev) {
     </div>
     <div class="flex justify-between items-center" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:13px;padding-top:13px"><span class="text-white font-bold text-sm">${sLabel} tháng</span><span class="font-extrabold" style="font-size:1.1rem;letter-spacing:-0.02em;color:${surplus>0?'#A48BFF':surplus<0?'#FB6B7C':'#9ca3af'}">${surplus>0?'+':surplus<0?'−':''}${fmt(Math.abs(surplus))}</span></div>`;
   if (savePct !== null) {
-    const barCls = savePct>=20?'bg-emerald-500':savePct>0?'bg-amber-400':'bg-red-500';
+    const barColor = savePct>=20 ? '#2FD49B' : savePct>0 ? '#fbbf24' : '#FB6B7C';
     html += `<div class="flex items-center gap-3" style="margin-top:14px">
       <span class="text-gray-400 text-xs flex-shrink-0">Tiết kiệm</span>
-      <div class="flex-1 prog-bg"><div class="prog-fill ${barCls}" style="width:${Math.min(100,savePct)}%"></div></div>
+      <div class="flex-1 prog-bg"><div class="prog-fill" style="width:${Math.min(100,savePct)}%;background:${barColor}"></div></div>
       <span class="text-gray-300 text-xs flex-shrink-0 w-8 text-right">${savePct}%</span>
     </div>`;
   }
