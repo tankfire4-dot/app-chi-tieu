@@ -4,7 +4,6 @@
 # Dev tools
 pwa/generate-icon.html
 node_modules/
-snapshot-preview.png
 
 # Flutter build artifacts
 flutter_app/build/
