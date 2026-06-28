@@ -242,13 +242,13 @@ function doGet(e) {
       // ── Thêm người mới ─────────────────────────────────────
       case "addPerson": {
         var name = (p.name || "").trim();
-        var keys = (p.keys || "").trim() || name.toLowerCase();
         if (!name) return err("Thiếu tên");
 
         var exists = loadPeople().some(function(x) { return x.name.toLowerCase() === name.toLowerCase(); });
         if (exists) return err("Tên này đã có rồi");
 
-        getSS().getSheetByName(TAB_PEOPLE).appendRow([name, keys]);
+        // Chỉ ghi cột Tên. Cột "Từ khóa tắt" (B) đã bỏ cùng chức năng nhập nhanh.
+        getSS().getSheetByName(TAB_PEOPLE).appendRow([name]);
         return ok({ name: name });
       }
 
@@ -265,60 +265,6 @@ function doGet(e) {
 
         getSS().getSheetByName(TAB_CATS).appendRow([emoji, name, type, keys]);
         return ok({ name: name });
-      }
-
-      // ── Nhập nhanh: "khoa ăn cơm 35" ───────────────────────
-      case "quickAdd": {
-        var text = (p.text || "").trim().toLowerCase();
-        if (!text) return err("Chưa nhập gì");
-
-        // 1. Dò số tiền ở cuối: "35k" hoặc "35" (<10000 thì nhân 1000)
-        var amount = 0;
-        var m = text.match(/(-?\s*\d+)\s*k$/i);
-        if (m) {
-          amount = parseInt(m[1].replace(/\s/g, "")) * 1000;
-          text = text.slice(0, m.index).trim();
-        } else {
-          m = text.match(/(-?\s*\d+)$/);
-          if (!m) return err("Không tìm thấy số tiền (vd: khoa ăn cơm 35)");
-          amount = parseInt(m[1].replace(/\s/g, ""));
-          text = text.slice(0, m.index).trim();
-          if (Math.abs(amount) < 10000) amount = amount * 1000;
-        }
-
-        // 2. Dò tên ở đầu câu (từ khóa dài ưu tiên trước)
-        var people = loadPeople();
-        var name = "";
-        var allKeys = [];
-        people.forEach(function(person) {
-          person.keys.forEach(function(k) { allKeys.push({ key: k, name: person.name }); });
-        });
-        allKeys.sort(function(a, b) { return b.key.length - a.key.length; });
-        for (var i = 0; i < allKeys.length; i++) {
-          var k = allKeys[i].key;
-          if (text === k || text.indexOf(k + " ") === 0) {
-            name = allKeys[i].name;
-            text = text.slice(k.length).trim();
-            break;
-          }
-        }
-        if (!name) return err("Không nhận diện được tên ở đầu câu");
-
-        // 3. Phân loại + hạng mục + Đã thu
-        var owner   = people[0].name;
-        var isOwner = name === owner;
-        var cat     = isOwner ? "Cá nhân" : "Cho mượn/ Ứng";
-        var sub     = autoHM(text, cat);
-        var detail  = text ? text.charAt(0).toUpperCase() + text.slice(1) : "Chi tiêu";
-
-        var sheet  = getSheet();
-        var newRow = sheet.getLastRow() + 1;
-        sheet.appendRow([today(), name, cat, sub, detail, amount, isOwner]);
-
-        return ok({
-          rowIndex: newRow, name: name, category: cat,
-          subcategory: sub, detail: detail, amount: amount
-        });
       }
 
       // ── Lấy giao dịch (lọc theo tháng nếu có month/year) ───

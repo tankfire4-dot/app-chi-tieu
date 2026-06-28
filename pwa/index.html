@@ -1508,23 +1508,6 @@ async function saveEdit() {
   setLoading(btn, false);
 }
 
-// ============ QUICK ADD ============
-async function doQuickAdd() {
-  const inp  = document.getElementById('quick-inp');
-  const text = inp.value.trim();
-  if(!text) return;
-  const btn = document.getElementById('quick-btn');
-  btn.style.opacity='.5'; btn.style.pointerEvents='none';
-  try {
-    const r = await api({action:'quickAdd', text:text});
-    S.lastRowIndex = r.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
-    inp.value='';
-    showToast(`✓ ${r.name} · ${r.subcategory||r.category} · ${fmt(r.amount)}`,'ok');
-    loadHome();
-  } catch(e) { showToast(e.message,'err'); }
-  btn.style.opacity='1'; btn.style.pointerEvents='auto';
-}
-
 // ============ SETTINGS ============
 async function doSetBalance() {
   const bal  = parseInt(document.getElementById('set-bal').value||'');

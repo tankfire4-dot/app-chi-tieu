@@ -12,6 +12,30 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-23 — Gỡ di sản "nhập nhanh" (quickAdd) + bỏ cột Từ khóa của danh_sach_ten
+
+**Vấn đề:** Khoa đã bỏ chức năng "điền tên nhanh" (nhập kiểu bot "khoa ăn cơm 35") khỏi giao diện, muốn
+xóa cột B "Từ khóa tắt" của tab `danh_sach_ten` cho gọn. Kiểm tra: cột B CHỈ phục vụ `quickAdd`; ô
+input `quick-inp` đã không còn trong HTML (UI đã gỡ), nhưng CODE còn rác: `doQuickAdd` (frontend chết,
+trỏ tới phần tử không tồn tại), case `quickAdd` (backend không ai gọi), và `addPerson` vẫn ghi 1 từ
+khóa vào cột B mỗi lần thêm người → xóa cột xong vẫn "mọc lại".
+
+**Quyết định:** (1) Xóa `doQuickAdd` (index.html). (2) Xóa case `quickAdd` (Code.gs). (3) `addPerson`
+chỉ `appendRow([name])`, không ghi cột B nữa. Giữ `loadPeople`/`autoHM` (autoHM vẫn dùng cho
+addSplit/addPaidBy; loadPeople đọc 2 cột vẫn an toàn — cột B rỗng → keys=[], không ai đọc keys nữa).
+
+**Vì sao:** Frontend chỉ lấy TÊN người (cột A); cột B (keys người) chỉ quickAdd đọc → quickAdd chết thì
+cột B = dữ liệu chết. Phải dọn `addPerson` nếu không cột B tái sinh. Không xóa nhầm `autoHM` (đó là dò
+từ khóa HẠNG MỤC, khác keys NGƯỜI).
+
+**Bài học:** Gỡ một tính năng phải truy ĐỦ chuỗi phụ thuộc: UI (đã gỡ) → handler JS (doQuickAdd) →
+action backend (quickAdd) → cột dữ liệu (B) → nơi GHI vào cột đó (addPerson). Bỏ sót `addPerson` thì
+cột rác cứ quay lại. Lưu ý vận hành: backend `Code.gs` chạy bản dán tay → muốn `addPerson` thôi ghi
+cột B trong app THẬT thì phải DÁN LẠI `pwa/Code.gs`; chưa dán lại thì cứ thêm người bằng cách gõ thẳng
+cột A trong Sheet (cũng giữ cột B sạch).
+
+---
+
 ## 2026-06-23 — Sửa auto-chọn hạng mục: lệch tên trường keys ↔ keywords + chuẩn hóa Unicode
 
 **Vấn đề:** Gõ "lẩu" trong màn Ghi chi tiêu (mà "lẩu" có trong từ khóa "Tiền ăn" ở Sheet) nhưng chip
