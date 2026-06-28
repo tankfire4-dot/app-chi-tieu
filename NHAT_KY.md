@@ -12,6 +12,26 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-23 — Thêm nút Đăng xuất / Đổi URL (kèm xóa cache theo URL)
+
+**Vấn đề:** Cài đặt chưa có chỗ thoát — URL Apps Script lưu trong localStorage, muốn đổi sang URL người
+khác (xem dữ liệu họ) thì không có nút nào.
+
+**Quyết định:** Thêm nút "Đăng xuất / Đổi URL kết nối" ở cuối sheet Cài đặt (bấm 2 lần, tự reset sau 3s).
+`doLogout` xóa `apiUrl` + **toàn bộ key cache `ct_*`** rồi `location.reload()` → về màn nhập URL.
+
+**Vì sao XÓA CẢ CACHE:** `cacheKey = 'ct_' + JSON.stringify(params)` — KHÔNG kèm URL. Nếu chỉ xóa
+`apiUrl` rồi nhập URL người khác, các key cache trùng nhau → app **hiện nhầm dữ liệu người trước** cho
+tới khi cache hết hạn (getRows 60s, getStats 5 phút…). Đây là lỗi rò rỉ dữ liệu chéo tài khoản, nên
+logout phải dọn sạch cache. Dùng `location.reload()` cho chắc (init không thấy `apiUrl` → tự hiện màn
+setup), tránh tự bật/tắt từng màn dễ sót trạng thái.
+
+**Bài học:** Cache key nên gắn danh tính nguồn (URL/tài khoản) nếu app có thể đổi nguồn. Ở đây chọn
+cách đơn giản & an toàn hơn: đổi nguồn = xóa sạch cache. (Chưa kiểm thử click được vì preview cần URL
+Apps Script thật để vào app; đã kiểm cú pháp JS.)
+
+---
+
 ## 2026-06-23 — Gỡ di sản "nhập nhanh" (quickAdd) + bỏ cột Từ khóa của danh_sach_ten
 
 **Vấn đề:** Khoa đã bỏ chức năng "điền tên nhanh" (nhập kiểu bot "khoa ăn cơm 35") khỏi giao diện, muốn

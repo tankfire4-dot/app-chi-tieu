@@ -516,6 +516,12 @@
     <button class="btn grad-btn-purple mb-5" style="padding:12px" onclick="doAddCategory()">+ Thêm hạng mục</button>
 
     <p class="text-gray-600 text-xs leading-relaxed">💡 Muốn sửa/xóa tên hoặc hạng mục: mở Google Sheet, tab <b class="text-gray-400">danh_sach_ten</b> và <b class="text-gray-400">hang_muc</b>. Dòng đầu tiên của danh_sach_ten là chủ app (tên của bạn).</p>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:18px;padding-top:16px">
+      <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#f87171;letter-spacing:0.08em">Tài khoản</p>
+      <button id="logout-btn" class="btn" style="padding:12px;background:rgba(239,68,68,0.12);color:#f87171" onclick="doLogout(this)">Đăng xuất / Đổi URL kết nối</button>
+      <p class="text-gray-600 text-xs mt-2">Chỉ xóa kết nối trên máy này để nhập URL khác (vd xem dữ liệu người khác). Dữ liệu vẫn an toàn trong Google Sheet.</p>
+    </div>
   </div>
 </div>
 
@@ -589,6 +595,26 @@ async function doSetup() {
     showToast('Không kết nối được. Kiểm tra lại URL','err');
     btn.disabled = false; btn.innerHTML = 'Kết nối & Bắt đầu';
   }
+}
+
+function doLogout(btn) {
+  // Bấm 2 lần để tránh nhỡ tay (đăng xuất xong phải nhập lại URL).
+  if (btn.dataset.confirm !== '1') {
+    btn.dataset.confirm = '1';
+    btn.textContent = 'Bấm lần nữa để đăng xuất ⚠️';
+    btn.style.background = 'rgba(239,68,68,0.28)';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => {
+      btn.dataset.confirm = '0';
+      btn.textContent = 'Đăng xuất / Đổi URL kết nối';
+      btn.style.background = 'rgba(239,68,68,0.12)';
+    }, 3000);
+    return;
+  }
+  clearTimeout(btn._t);
+  // Cache lưu theo tham số, KHÔNG kèm URL → phải xóa hết, nếu không URL mới sẽ hiện nhầm dữ liệu cũ.
+  Object.keys(localStorage).filter(k => k === 'apiUrl' || k.indexOf('ct_') === 0).forEach(k => localStorage.removeItem(k));
+  location.reload();
 }
 
 async function enterApp() {
