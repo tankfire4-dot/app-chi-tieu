@@ -12,6 +12,28 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-06-23 — Sửa auto-chọn hạng mục: lệch tên trường keys ↔ keywords + chuẩn hóa Unicode
+
+**Vấn đề:** Gõ "lẩu" trong màn Ghi chi tiêu (mà "lẩu" có trong từ khóa "Tiền ăn" ở Sheet) nhưng chip
+hạng mục KHÔNG tự sáng. Lỗi với MỌI từ khóa, không riêng "lẩu".
+
+**Quyết định:** (1) Frontend `applyConfig` đọc từ khóa sai trường: backend `getConfig` trả mỗi hạng
+mục có `keys` (MẢNG) nhưng `mk` lại đọc `c.keywords` → luôn rỗng → `autoHM` không có gì để dò, rớt về
+so theo TÊN hạng mục (gõ "lẩu" không khớp "Tiền ăn"). Sửa `mk` đọc `c.keys` (join thành chuỗi). (2)
+Thêm `.normalize('NFC')` cho cả từ khóa lẫn chữ người dùng gõ — bàn phím tiếng Việt trên điện thoại
+hay xuất ký tự tổ hợp (NFD) lệch mã với chữ dựng sẵn (NFC) lưu trong Sheet, khiến `includes` trượt dù
+nhìn giống hệt.
+
+**Vì sao:** Đây là lỗi "âm thầm" kinh điển do hai đầu (Apps Script ↔ JS) đặt tên trường khác nhau —
+`undefined` không báo lỗi, chỉ lặng lẽ thành rỗng. Backend `quickAdd` vẫn tự phân loại đúng vì nó
+dùng `keys` server-side; chỉ chip auto-sáng ở client hỏng → đúng triệu chứng Khoa thấy.
+
+**Bài học:** Khi frontend đọc dữ liệu từ backend, phải khớp ĐÚNG tên trường (ở đây `keys`, không phải
+`keywords`). Và mọi so khớp chuỗi tiếng Việt nên `normalize('NFC')` hai phía. Đã test mô phỏng 6 input
+(lẩu/cơm/phở/bún bò/wifi nhà/trọ tháng 6) → khớp đúng hạng mục.
+
+---
+
 ## 2026-06-23 — Chuẩn hóa tên hạng mục trong dữ liệu cũ (script chạy một lần)
 
 **Vấn đề:** Gốc của loạt lỗi xếp-ô/icon hôm trước là tên hạng mục trong DỮ LIỆU (`to_nhap_lieu`) lệch

@@ -614,7 +614,13 @@ function applyConfig(cfg) {
   OWNER = cfg.owner || OWNER;
   if(cfg.people && cfg.people.length) PEOPLE = cfg.people.map(p=>p.name);
   if(cfg.categories && cfg.categories.length) {
-    const mk = c => ({ label:(c.emoji?c.emoji+' ':'')+c.name, name:c.name, keywords:(c.keywords||'').toLowerCase() });
+    // Backend trả từ khóa ở trường `keys` (mảng) — KHÔNG phải `keywords`. Đọc đúng `keys`, chuẩn hóa
+    // NFC để khớp với chữ bàn phím tiếng Việt gõ ra (tránh lệch mã tổ hợp/dựng sẵn).
+    const mk = c => ({
+      label: (c.emoji ? c.emoji + ' ' : '') + c.name,
+      name: c.name,
+      keywords: (Array.isArray(c.keys) ? c.keys.join(',') : (c.keywords || '')).toLowerCase().normalize('NFC')
+    });
     HM_CA_NHAN  = cfg.categories.filter(c=>c.type==='Cá nhân').map(mk);
     HM_CHO_MUON = cfg.categories.filter(c=>c.type==='Cho mượn/ Ứng').map(mk);
     const thu   = cfg.categories.filter(c=>c.type==='Thu nhập').map(mk);
@@ -1272,7 +1278,7 @@ function selectHM(el, id) {
 
 
 function autoHM(tabIdx) {
-  const text = (document.getElementById('dt'+tabIdx).value || '').toLowerCase();
+  const text = (document.getElementById('dt'+tabIdx).value || '').toLowerCase().normalize('NFC');
   const hmId = 'hm'+tabIdx;
   if (!text) {
     document.querySelectorAll('#'+hmId+' .chip').forEach(c=>{c.classList.remove('chip-on');c.classList.add('chip-off');});
@@ -1283,7 +1289,8 @@ function autoHM(tabIdx) {
     : HM_CA_NHAN;
   const matched = list.find(h => {
     if (h.keywords) return h.keywords.split(',').some(k => k.trim() && text.includes(k.trim()));
-    return h.name.toLowerCase().includes(text) || text.includes(h.name.toLowerCase());
+    const n = h.name.toLowerCase().normalize('NFC');
+    return n.includes(text) || text.includes(n);
   });
   document.querySelectorAll('#'+hmId+' .chip').forEach(c => {
     const on = !!matched && c.dataset.name === matched.name;
