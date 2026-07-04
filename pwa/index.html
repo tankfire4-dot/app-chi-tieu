@@ -568,16 +568,30 @@ function cacheSet(params, data) {
 }
 
 // ============ API ============
-async function api(params, {useCache=false}={}) {
+// Apps Script hay trả 404/302 chập chờn khi bị bắn nhiều request cùng lúc. Thử lại cho lệnh ĐỌC
+// (idempotent, an toàn). Lệnh GHI KHÔNG tự thử lại — tránh ghi trùng (lệnh có thể đã vào Sheet dù
+// phản hồi lỗi). Muốn cho phép thử lại thủ công thì truyền {retry:n}.
+const READ_ACTIONS = new Set(['getConfig','getRows','getBalance','getStats','getDebts','getPeople']);
+async function api(params, {useCache=false, retry}={}) {
   if (useCache) { const hit = cacheGet(params); if (hit) return hit; }
   const url = new URL(S.url);
   Object.entries({token:TOKEN,...params}).forEach(([k,v]) => url.searchParams.set(k,v));
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error('HTTP '+res.status);
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || 'Lỗi không xác định');
-  cacheSet(params, data);
-  return data;
+  const attempts = 1 + (retry !== undefined ? retry : (READ_ACTIONS.has(params.action) ? 2 : 0));
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Lỗi không xác định');
+      cacheSet(params, data);
+      return data;
+    } catch(e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, 500 * (i+1)));
+    }
+  }
+  throw lastErr;
 }
 
 // ============ SETUP ============

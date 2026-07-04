@@ -12,6 +12,31 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-04 — HTTP 404 chập chờn khi mở app: thêm thử-lại cho lệnh ĐỌC
+
+**Vấn đề:** App báo "HTTP 404" khi ghi/đọc. Triệu chứng: 1 giao dịch ("móc treo") bị ghi TRÙNG 3 lần +
+thẻ số dư hiện "---". Tức là lệnh GHI đã vào Sheet nhưng phản hồi 404 làm app tưởng lỗi → Khoa bấm Ghi
+lại nhiều lần → trùng; và `getBalance` (lệnh đọc) cũng 404.
+
+**Chẩn đoán:** Cùng một URL mà lúc được lúc 404 → KHÔNG phải URL sai (URL sai thì hỏng sạch). Đây là
+404/302 chập chờn của Apps Script — hạ tầng Google hay lỗi tạm khi bị bắn nhiều request gần như đồng
+thời lúc mở app (getConfig×2 + getRows + getBalance…). Lỗi phía server, không phải bug giao diện.
+
+**Quyết định:** Thêm cơ chế thử-lại trong `api()` CHỈ cho lệnh ĐỌC (getConfig/getRows/getBalance/
+getStats/getDebts/getPeople) — idempotent nên thử lại an toàn (2 lần, giãn 500ms/1s). Lệnh GHI GIỮ
+nguyên 1 lần, KHÔNG tự thử lại (lệnh có thể đã vào Sheet dù phản hồi lỗi → thử lại sẽ ghi trùng, đúng
+cái vừa xảy ra). Muốn ép thử lại thủ công thì truyền `{retry:n}`.
+
+**Vì sao không tự thử lại lệnh GHI:** an toàn dữ liệu > tiện lợi. Ghi trùng khó dọn hơn là hiện lỗi để
+người dùng tự bấm lại. Khoa cần xóa 2 dòng "móc treo" thừa.
+
+**Bài học:** Web app Apps Script không chịu tải tốt khi nhiều request song song; client nên (a) thử
+lại lệnh đọc, (b) TUYỆT ĐỐI không tự thử lại lệnh ghi không-idempotent. Về sau nếu vẫn trùng, cân
+nhắc chống double-submit ở nút Ghi (khóa nút tới khi có phản hồi — hiện đã có setLoading nhưng lỗi
+mạng vẫn mở lại nút).
+
+---
+
 ## 2026-06-23 — Thêm nút Đăng xuất / Đổi URL (kèm xóa cache theo URL)
 
 **Vấn đề:** Cài đặt chưa có chỗ thoát — URL Apps Script lưu trong localStorage, muốn đổi sang URL người
