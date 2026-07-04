@@ -58,7 +58,7 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 
 ---
 
-## ⚠️ Ba cái bẫy phải nhớ
+## ⚠️ Bốn cái bẫy phải nhớ
 
 1. **CSS = bộ utility class TỰ VIẾT, KHÔNG phải Tailwind đầy đủ.** Chỉ một số class màu được định
    nghĩa (vd có `bg-emerald-600`, KHÔNG có `bg-emerald-500`). Class chưa định nghĩa = vô tác dụng,
@@ -75,6 +75,10 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
    (hiện nhanh) + 1 lần `getConfig` KHÔNG cache (dòng ~607) lấy tươi rồi vẽ lại chip → **sửa tay trong
    Sheet chỉ cần ĐÓNG & MỞ LẠI app 1 lần là có** (KHÔNG phải đợi hết TTL cache 1 ngày). Thêm qua nút
    trong app thì thấy liền (gọi `getConfig` tươi ngay).
+4. **`pwa/Code.gs` trong repo ≠ bản backend ĐANG CHẠY.** Apps Script chạy bản dán tay vào IDE, không
+   tự sync repo. Mọi sửa đổi backend chỉ có hiệu lực sau khi: mở Apps Script → dán đè `pwa/Code.gs`
+   → Lưu → **Triển khai → Quản lý bản triển khai → sửa deployment CŨ → Phiên bản mới** (giữ nguyên
+   URL, KHÔNG tạo deployment mới kẻo đổi URL). Sửa xong Code.gs trong repo phải NHẮC Khoa dán lại.
 
 ---
 

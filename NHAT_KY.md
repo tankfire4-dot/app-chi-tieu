@@ -12,6 +12,38 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-04 — Tổng kiểm tra an toàn dữ liệu (Khoa lo sau sự cố 404) → vá 2 lỗ hổng lõi
+
+**Vấn đề:** Sau ~1 tháng chạy ổn rồi dính liền 2 sự cố (404 chập chờn, nửa giao dịch), Khoa lo ngại
+độ tin cậy — app tài chính, sai âm thầm là mất tiền oan. Yêu cầu: rà toàn bộ.
+
+**Kết quả rà (xếp theo độ nguy hiểm):**
+1. **Sửa/Xóa/Tick-đã-thu tin mù quáng vào SỐ THỨ TỰ DÒNG** (`editRow`/`deleteRow`/`markCollected`
+   nhận `rowIndex` và làm ngay). Nếu Sheet bị chèn/xóa dòng tay (Khoa hay thao tác trên PC) mà app
+   đang cầm bản cũ → sửa/xóa/tick **NHẦM giao dịch khác**, không ai hay. Loại lỗi tệ nhất: sai âm thầm.
+2. **Không có khóa chống ghi chồng**: `addSplit`/`addFronted` tính `firstRow = getLastRow()+1` rồi
+   append nhiều dòng — 2 lệnh ghi đồng thời có thể chen dòng → `firstRow` sai → **Undo xóa nhầm dòng**.
+3. (Đã vá v52) fronted 2 lệnh rời → nửa giao dịch. 4. (Đã vá v51) 404 → retry lệnh đọc.
+5. (Ghi nhận, chưa sửa) Undo (`deleteRow` count>1) không xác minh nội dung — cửa sổ 60s, rủi ro thấp.
+6. (Ghi nhận) Token cố định trong URL — ai có URL là đọc/ghi được dữ liệu → URL phải giữ kín như
+   mật khẩu, không đăng ảnh chụp có URL đầy đủ.
+
+**Quyết định (vá 1+2, cùng lần dán Code.gs với addFronted):**
+- **Chốt xác minh nội dung:** app gửi kèm `verifyName`/`verifyAmount(s)` = tên + số tiền nó ĐANG
+  thấy; backend so lại từng dòng TRƯỚC khi sửa/xóa/tick, lệch → từ chối toàn bộ + báo "đóng mở lại
+  app". Fail-safe: thà bắt làm mới còn hơn sai âm thầm. Tương thích 2 chiều (backend cũ bỏ qua param
+  lạ; frontend cũ không gửi thì backend mới bỏ qua kiểm).
+- **LockService** cho mọi action ghi (`waitLock 15s`, release trong `finally`) → lệnh ghi xếp hàng,
+  hết cảnh chen dòng.
+- Đã mô phỏng logic chốt bằng node: từ chối đúng ca "Sheet dịch dòng", cho qua ca khớp + số âm.
+
+**Bài học:** App tài chính phải thiết kế theo nguyên tắc "**xác minh trước khi phá hủy**" — định danh
+bằng nội dung, đừng chỉ bằng vị trí. Hai sự cố tuần này đều chung một gốc: tin vào trạng thái cũ
+(row index cũ, lệnh ghi tách đôi). Backend là bản dán tay → mọi vá backend chỉ có hiệu lực sau khi
+DÁN LẠI `pwa/Code.gs` + Triển khai bản mới.
+
+---
+
 ## 2026-07-04 — "Họ trả giúp" bị nửa giao dịch: gộp 2 dòng thành 1 lệnh atomic (addFronted)
 
 **Vấn đề:** Ghi kiểu "Bạn nợ họ → Họ trả giúp" (móc treo 40k, Việt trả hộ) → hiện khoản CHI của Khoa

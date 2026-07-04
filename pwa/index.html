@@ -1493,7 +1493,7 @@ function openTxDetail(r) {
     mainBtns = `<button onclick="closeBs('bs-tx')" class="btn" style="padding:13px;background:rgba(255,255,255,0.07)">Đóng</button>`;
   } else if(r.category==='Cho mượn/ Ứng' && r.amount>0) {
     statusEl.textContent='Chưa thu'; statusEl.className='text-sm font-semibold text-amber-400';
-    mainBtns = `<button onclick="markCollected([${r.rowIndex}])" class="btn grad-btn-green flex-1" style="padding:12px">Đánh dấu đã thu</button><button onclick="closeBs('bs-tx')" class="btn flex-1" style="padding:12px;background:rgba(255,255,255,0.07)">Đóng</button>`;
+    mainBtns = `<button onclick="markCollectedCur()" class="btn grad-btn-green flex-1" style="padding:12px">Đánh dấu đã thu</button><button onclick="closeBs('bs-tx')" class="btn flex-1" style="padding:12px;background:rgba(255,255,255,0.07)">Đóng</button>`;
   } else {
     statusEl.textContent='—'; statusEl.className='text-sm font-semibold text-gray-500';
     mainBtns = `<button onclick="closeBs('bs-tx')" class="btn" style="padding:13px;background:rgba(255,255,255,0.07)">Đóng</button>`;
@@ -1543,7 +1543,11 @@ async function saveEdit() {
       action:'editRow', rowIndex:r.rowIndex,
       detail:      document.getElementById('ed-detail').value,
       amount:      parseInt(document.getElementById('ed-amount').value||'0'),
-      subcategory: document.getElementById('ed-sub').value
+      subcategory: document.getElementById('ed-sub').value,
+      // Xác minh: tên + số tiền TRƯỚC KHI SỬA (cái app đang thấy) — backend so lại rồi mới
+      // cho sửa, chống sửa nhầm dòng khác khi Sheet bị xê dịch.
+      verifyName:   r.name,
+      verifyAmount: r.amount
     };
     if(r.category!=='Thu nhập') params.name = document.getElementById('ed-name').value;
     await api(params);
@@ -1627,7 +1631,12 @@ async function deleteTx(rowIndex, btn) {
   }
   btn.disabled = true;
   try {
-    await api({ action:'deleteRow', rowIndex:rowIndex, count:1 });
+    // Gửi kèm tên + số tiền app đang thấy — backend so lại trước khi xóa, chống xóa nhầm
+    // dòng khác khi Sheet bị xê dịch (backend cũ chưa có sẽ tự bỏ qua).
+    const params = { action:'deleteRow', rowIndex:rowIndex, count:1 };
+    const r = S.curTx;
+    if (r && r.rowIndex === rowIndex) { params.verifyName = r.name; params.verifyAmount = r.amount; }
+    await api(params);
     closeBs('bs-tx');
     showToast('Đã xóa giao dịch ✓','ok');
     loadHome();
@@ -1660,18 +1669,29 @@ function openDebtSheet(d) {
   btn.onclick = () => {
     const checked = [...document.querySelectorAll('.debt-row-chk:checked')].map(el => +el.dataset.idx);
     if (!checked.length) { showToast('Chưa chọn khoản nào', 'err'); return; }
-    markCollected(checked);
+    const amtByIdx = {}; d.rows.forEach(r => amtByIdx[r.rowIndex] = r.amount);
+    markCollected(checked, { name: d.name, amounts: checked.map(i => amtByIdx[i]) });
   };
   openBs('bs-debt');
 }
 
-async function markCollected(rowIndexes) {
+async function markCollected(rowIndexes, verify) {
   closeBs('bs-tx'); closeBs('bs-debt');
   try {
-    await api({ action:'markCollected', rows:rowIndexes.join(',') });
+    // verify = {name, amounts[]}: backend so tên + số tiền từng dòng trước khi tick —
+    // chống tick nhầm khi Sheet bị xê dịch dòng (backend cũ chưa có sẽ tự bỏ qua).
+    const params = { action:'markCollected', rows:rowIndexes.join(',') };
+    if (verify) { params.verifyName = verify.name; params.verifyAmounts = verify.amounts.join(','); }
+    await api(params);
     showToast('Đã đánh dấu thu xong ✓','ok');
     loadDebts();
   } catch(e) { showToast('Lỗi: '+e.message,'err'); }
+}
+
+// Tick đã thu từ sheet chi tiết giao dịch (dùng S.curTx làm nguồn xác minh)
+function markCollectedCur() {
+  const r = S.curTx; if (!r) return;
+  markCollected([r.rowIndex], { name: r.name, amounts: [r.amount] });
 }
 
 // ============ TOAST ============

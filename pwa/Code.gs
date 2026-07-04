@@ -211,12 +211,22 @@ function err(msg) {
 }
 
 // ============ MAIN ============
+// Các action GHI — phải xếp hàng qua khóa, không cho 2 lệnh ghi chạy chồng nhau
+// (2 lệnh ghi đồng thời có thể chen dòng → firstRow sai → Undo xóa nhầm dòng).
+var WRITE_ACTIONS = { addRow:1, addSplit:1, addPaidBy:1, addFronted:1, editRow:1,
+                      deleteRow:1, markCollected:1, setBalance:1, addPerson:1, addCategory:1 };
+
 function doGet(e) {
   var p = e.parameter;
 
   if (!p.token || p.token !== API_TOKEN) return err("Unauthorized");
 
+  var lock = null;
   try {
+    if (WRITE_ACTIONS[p.action]) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(15000);   // quá 15s không lấy được khóa → ném lỗi, trả về err bên dưới
+    }
     switch (p.action) {
 
       // ── Cấu hình: app gọi 1 lần lúc mở ─────────────────────
@@ -439,6 +449,16 @@ function doGet(e) {
         // Dòng Thu nhập giữ nguyên phân loại, không đổi người
         var curCat  = String(sheet.getRange(rowIndex, 3).getValue());
         var curName = String(sheet.getRange(rowIndex, 2).getValue());
+
+        // CHỐT AN TOÀN: app gửi kèm tên + số tiền nó ĐANG THẤY ở dòng này. Nếu Sheet đã bị
+        // xê dịch dòng (chèn/xóa tay trên máy tính) thì nội dung không khớp → TỪ CHỐI sửa,
+        // tuyệt đối không sửa nhầm giao dịch khác.
+        if (p.verifyName !== undefined && curName.trim() !== String(p.verifyName).trim())
+          return err("Dòng đã thay đổi trên Sheet — đóng mở lại app rồi thử lại");
+        if (p.verifyAmount !== undefined &&
+            (Number(sheet.getRange(rowIndex, 6).getValue()) || 0) !== parseInt(p.verifyAmount))
+          return err("Dòng đã thay đổi trên Sheet — đóng mở lại app rồi thử lại");
+
         if (p.name !== undefined && p.name !== "" && curCat !== "Thu nhập") {
           var isOwner = p.name === getOwner();
           var wasOwner = curName === getOwner();
@@ -461,7 +481,17 @@ function doGet(e) {
         var count    = parseInt(p.count    || "1");
         if (rowIndex < 2) return err("Dòng không hợp lệ");
 
-        getSheet().deleteRows(rowIndex, count);
+        var sheet = getSheet();
+
+        // CHỐT AN TOÀN (như editRow): nội dung dòng phải khớp cái app đang thấy mới cho xóa.
+        if (p.verifyName !== undefined &&
+            String(sheet.getRange(rowIndex, 2).getValue()).trim() !== String(p.verifyName).trim())
+          return err("Dòng đã thay đổi trên Sheet — đóng mở lại app rồi thử lại");
+        if (p.verifyAmount !== undefined &&
+            (Number(sheet.getRange(rowIndex, 6).getValue()) || 0) !== parseInt(p.verifyAmount))
+          return err("Dòng đã thay đổi trên Sheet — đóng mở lại app rồi thử lại");
+
+        sheet.deleteRows(rowIndex, count);
         return ok({ deleted: count });
       }
 
@@ -606,6 +636,21 @@ function doGet(e) {
         if (!indexes.length) return err("Không có dòng nào");
 
         var sheet = getSheet();
+
+        // CHỐT AN TOÀN: kiểm TÊN + SỐ TIỀN từng dòng trước khi tick. Lệch 1 dòng → từ chối
+        // TOÀN BỘ (không tick nửa chừng), báo người dùng làm mới. Chống tick nhầm khi Sheet
+        // bị chèn/xóa dòng hoặc app đang cầm danh sách công nợ cũ.
+        if (p.verifyAmounts) {
+          var vAmts = String(p.verifyAmounts).split(",").map(Number);
+          var vName = String(p.verifyName || "").trim();
+          for (var vi = 0; vi < indexes.length; vi++) {
+            var rN = String(sheet.getRange(indexes[vi], 2).getValue()).trim();
+            var rA = Number(sheet.getRange(indexes[vi], 6).getValue()) || 0;
+            if ((vName && rN !== vName) || (vi < vAmts.length && rA !== vAmts[vi]))
+              return err("Công nợ đã thay đổi — đóng mở lại app rồi thử lại");
+          }
+        }
+
         var nowStr = today();
         indexes.forEach(function(r) {
           sheet.getRange(r, 7).setValue(true);
@@ -620,6 +665,8 @@ function doGet(e) {
 
   } catch (e) {
     return err(e.toString());
+  } finally {
+    if (lock) lock.releaseLock();
   }
 }
 
