@@ -12,6 +12,31 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-04 — "Họ trả giúp" bị nửa giao dịch: gộp 2 dòng thành 1 lệnh atomic (addFronted)
+
+**Vấn đề:** Ghi kiểu "Bạn nợ họ → Họ trả giúp" (móc treo 40k, Việt trả hộ) → hiện khoản CHI của Khoa
+nhưng KHÔNG có khoản NỢ Việt. Nguyên nhân: đường `submit0` fronted gọi **2 lệnh addRow rời** (dòng 1
+= Khoa chi Cá nhân; dòng 2 = Việt −40k Cho mượn). Lệnh 2 vấp 404 (xem mục trên) → chỉ ghi được dòng
+1 → **nửa giao dịch**. Đã xác nhận `getDebts`/`renderDebts` cộng đúng khoản âm (mình nợ) → không phải
+lỗi hiển thị, mà là dòng nợ chưa vào Sheet.
+
+**Quyết định:** Thêm action backend **`addFronted`** ghi CẢ 2 dòng trong 1 lần chạy Apps Script →
+atomic (một execution: hoặc cả hai `appendRow` chạy, hoặc không; kể cả khi phản hồi 404 thì 2 dòng
+ĐÃ vào Sheet, dữ liệu vẫn nhất quán). Frontend gọi `addFronted`; nếu backend cũ trả `"Unknown action"`
+thì fallback về 2 lệnh rời (giữ tương thích, KHÔNG vỡ máy chưa dán lại Code.gs). **Chỉ fallback khi
+lỗi là "Unknown action"** — lỗi 404 KHÔNG fallback, tránh ghi trùng.
+
+**Vì sao atomic ở backend chứ không retry ở frontend:** không thể retry an toàn lệnh ghi (đã vào Sheet
+dù phản hồi lỗi → retry = trùng). Gộp vào 1 execution là cách duy nhất đảm bảo "cả hai hoặc không".
+addSplit/addPaidBy vốn đã 1-lệnh nên an toàn; chỉ đường fronted trước đây lỡ tách 2 lệnh.
+
+**Bài học:** Nhiều thao tác ghi phải-đi-cùng-nhau thì DỒN vào 1 lệnh backend, đừng chuỗi nhiều lệnh
+từ client (mỗi lệnh là một lần phơi ra lỗi mạng, lại không atomic). Vận hành: **phải DÁN LẠI
+`pwa/Code.gs`** vào Apps Script thì addFronted mới có tác dụng; chưa dán thì vẫn chạy kiểu cũ. Dữ liệu
+"móc treo" nửa vời hiện tại: Khoa cần dọn tay (xóa khoản chi mồ côi rồi ghi lại, hoặc thêm khoản nợ Việt).
+
+---
+
 ## 2026-07-04 — HTTP 404 chập chờn khi mở app: thêm thử-lại cho lệnh ĐỌC
 
 **Vấn đề:** App báo "HTTP 404" khi ghi/đọc. Triệu chứng: 1 giao dịch ("móc treo") bị ghi TRÙNG 3 lần +

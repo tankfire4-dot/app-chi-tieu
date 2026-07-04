@@ -1386,12 +1386,18 @@ async function submit0() {
     const detail = document.getElementById('dt0').value;
     const isIOwe = !isThu && S.dir0==='i_owe';
     if (isIOwe && S.oweMode0==='fronted') {
-      // Họ trả giúp khoản bạn dùng → 2 dòng
-      // Row 1: OWNER chi (Cá nhân, TRUE)
-      const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:getHM('hm0') });
-      // Row 2: person debt — negative = bạn nợ họ (Cho mượn, FALSE)
-      await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:getHM('hm0') });
-      S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
+      // Họ trả giúp → 2 dòng (mình chi + mình nợ họ). Ghi bằng 1 lệnh atomic addFronted để KHÔNG
+      // bao giờ nửa vời. Backend cũ chưa có addFronted → fallback 2 lệnh rời (giữ tương thích).
+      const sub = getHM('hm0');
+      try {
+        const res = await api({ action:'addFronted', person:S.selectedPerson0, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
+        S.lastRowIndex = res.firstRow; S.lastRowCount = 2; S.lastRowTime = Date.now();
+      } catch(eF) {
+        if (!/Unknown action/i.test(eF.message)) throw eF;   // lỗi thật (vd 404) → không fallback, tránh ghi trùng
+        const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
+        await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:sub });
+        S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
+      }
       resetTab(0); goBack();
       setTimeout(()=>showToast('Đã ghi — chi của bạn + bạn nợ họ ✓','ok'),200);
     } else if (isIOwe) {

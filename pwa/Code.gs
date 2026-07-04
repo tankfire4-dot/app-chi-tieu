@@ -406,6 +406,27 @@ function doGet(e) {
         return ok({ firstRow: firstRow, rowsAdded: 2, halfOwner: halfOwner, halfPayer: halfPayer });
       }
 
+      // ── Họ trả giúp: mình DÙNG khoản, người khác trả hộ TOÀN BỘ ──
+      // Ghi 2 dòng (mình chi cá nhân + mình nợ họ) TRONG 1 LẦN CHẠY → atomic: hoặc vào cả hai,
+      // hoặc không cái nào. Tránh "nửa giao dịch" như khi frontend gọi 2 lệnh addRow rời (lệnh 2
+      // vấp mạng → có khoản chi mà mất khoản nợ).
+      case "addFronted": {
+        var owner  = getOwner();
+        var person = (p.person || "").trim();
+        var detail = p.detail || "Chi tiêu";
+        var amount = parseInt(p.amount || "0");
+        var sub    = p.subcategory || "";
+        if (!person || person === owner) return err("Tên người không hợp lệ");
+        if (!amount) return err("Thiếu số tiền");
+
+        var sheet    = getSheet();
+        var firstRow = sheet.getLastRow() + 1;
+        sheet.appendRow([today(), owner,  "Cá nhân",       sub, detail,  amount, true]);
+        sheet.appendRow([today(), person, "Cho mượn/ Ứng", sub, detail, -amount, false]);
+
+        return ok({ firstRow: firstRow, rowsAdded: 2 });
+      }
+
       // ── Sửa giao dịch đã ghi ───────────────────────────────
       case "editRow": {
         var rowIndex = parseInt(p.rowIndex || "0");
