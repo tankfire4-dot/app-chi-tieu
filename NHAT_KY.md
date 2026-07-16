@@ -12,6 +12,26 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-16 — Thống kê: thêm % tỷ trọng sau số tiền (Khoa yêu cầu)
+
+**Vấn đề:** Màn Thống kê chỉ hiện số tuyệt đối; Khoa muốn biết mỗi hạng mục/mỗi người chiếm bao
+nhiêu phần tổng để có góc nhìn tổng thể (thanh ngang có sẵn nhưng mắt không đọc ra con số).
+
+**Quyết định:** Thêm nhãn % xám nhỏ ngay SAU số tiền ở 3 khối: Công nợ cần thu (% trên tổng nợ),
+Chi tiêu cá nhân và Cho mượn/Ứng (% trên tổng khối). Nhãn bề rộng cố định 33px, canh phải → cột %
+thẳng hàng giữa các dòng, cột số tiền không bị xô lệch. Dưới 1% hiện `<1%` thay vì `0%`.
+Helper `pctBadge` nằm trong `renderStats`. Bump cache `chi-tieu-v54`.
+
+**Vì sao đặt sau số tiền chứ không sau tên:** % là thuộc tính của con số, để cạnh số dễ so;
+đặt sau tên sẽ vướng `truncate` khi tên dài. Dùng class `text-gray-500` CÓ SẴN + style inline
+(tránh bẫy số 1: utility class tự viết, class lạ âm thầm vô tác dụng).
+
+**Bài học:** % tỷ trọng vốn đã tính cho width thanh ngang (`pct`) — chỉ là chưa hiện ra chữ.
+Thay đổi thuần frontend, không đụng Code.gs. (Kiểm bằng node: cú pháp cả khối script + thử
+pctBadge với số thật từ màn hình Khoa chụp: 1.423.000/2.078.000 → 68%.)
+
+---
+
 ## 2026-07-04 — Tổng kiểm tra an toàn dữ liệu (Khoa lo sau sự cố 404) → vá 2 lỗ hổng lõi
 
 **Vấn đề:** Sau ~1 tháng chạy ổn rồi dính liền 2 sự cố (404 chập chờn, nửa giao dịch), Khoa lo ngại

@@ -1,4 +1,4 @@
-const CACHE = 'chi-tieu-v53';
+const CACHE = 'chi-tieu-v54';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {

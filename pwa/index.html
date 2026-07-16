@@ -1006,6 +1006,13 @@ function renderStats(d, month, year, debts, prev, statRows) {
   const debtList = (debts||[]).filter(x=>x.balance>0).sort((a,b)=>b.balance-a.balance);
   const totalDebt = debtList.reduce((a,x)=>a+x.balance,0);
 
+  // Nhãn % tỷ trọng đặt sau số tiền — bề rộng cố định để cột % thẳng hàng giữa các dòng
+  const pctBadge = (amt, total) => {
+    if (!total) return '';
+    const p = Math.round(amt / total * 100);
+    return `<span class="text-gray-500" style="font-size:11px;font-weight:600;display:inline-block;min-width:33px;text-align:right">${p < 1 ? '&lt;1%' : p + '%'}</span>`;
+  };
+
   // Block 0: 2 thẻ tổng (Tổng chi / Thu nhập) — theo bản Claude Design
   const trendOnGrad = (delta) => {
     if (delta === null) return `<p style="height:15px;margin-top:2px"></p>`;
@@ -1116,7 +1123,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       html += `<div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
         <span class="text-gray-200 text-sm flex-1">${x.name}</span>
-        <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}</span>
+        <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}${pctBadge(x.balance, totalDebt)}</span>
       </div>`;
     });
     html += `</div></div>`;
@@ -1143,7 +1150,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const pct = Math.round(amt/totalCaNhan*100);
       const emoji = statEmoji(name, HM_CA_NHAN);
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>`;
     });
     html += `</div></div>`;
@@ -1156,7 +1163,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const pct = Math.round(amt/totalChoMuon*100);
       const emoji = statEmoji(name, HM_CHO_MUON);
       html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}</span></div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>`;
     });
     html += `</div></div>`;
