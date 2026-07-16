@@ -12,6 +12,34 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-16 — Thống kê: bấm hạng mục để xổ chi tiết giao dịch + vá deploy.ps1 báo nhầm
+
+**Vấn đề:** Màn Thống kê chỉ hiện tổng mỗi hạng mục; Khoa dùng thấy "thiếu thiếu" — muốn bấm vào
+một mục (vd Tiền ăn) là xổ ra các giao dịch trong mục đó, giống dòng ở "Giao dịch gần đây".
+
+**Quyết định (thuần frontend, không đụng Code.gs):**
+- `renderStats` gom thêm `caRows`/`cmRows` = mảng giao dịch theo hạng mục (song song với map tổng đã
+  có). Mỗi dòng hạng mục ở 2 khối (Chi tiêu cá nhân, Cho mượn/Ứng) thành **accordion**: bấm head →
+  toggle class `open` trên `.stat-cat` (thuần CSS, `onclick="this.parentElement.classList.toggle('open')"`).
+- Detail dùng `statRows` (cùng nguồn `getRows` với danh sách giao dịch) → nội dung khớp tổng, không
+  gọi thêm API. Sắp mới→cũ. Cho mượn: khoản dương xanh, khoản trả (âm) đỏ → tổng detail = tổng mục.
+- Thêm caret ▾ (xoay), số lượng giao dịch "·N" cạnh tên. Bump cache `chi-tieu-v55`.
+- **Bẫy #1 đã kiểm:** mọi class mới (`gap-1`, `min-w-0`, `flex-shrink-0`, `text-gray-300/600`,
+  `font-normal`) đều CÓ trong bộ utility tự viết — grep xác nhận từng cái, không có class chết.
+- **Kiểm mắt:** dựng harness dùng đúng khối `<style>` + markup y hệt, chụp Chrome headless →
+  accordion mở/đóng, caret xoay, tên dài truncate gọn, cột %/số tiền thẳng hàng. Đạt.
+
+**Vá kèm — `deploy.ps1` báo "thành công" kể cả khi push HỎNG:** hôm nay deploy lần 1 im lặng thất
+bại (máy sau reset chưa có danh tính git → bản tạm không commit được) nhưng script vẫn in "Deploy
+thanh cong!". Đã thêm: (a) chặn sớm nếu repo chưa có `user.name/email` (in hướng dẫn set); (b)
+`try/catch` + kiểm `$LASTEXITCODE` sau commit/push, hỏng thì báo đỏ + `exit 1`, không báo nhầm nữa.
+
+**Bài học:** Dữ liệu để drill-down vốn đã có sẵn trong `statRows` — chỉ là chưa hiện ra. Accordion
+thuần CSS (toggle class) an toàn hơn nhồi handler JS. Script deploy PHẢI kiểm mã lỗi, không thì một
+lần push hỏng sẽ khiến người ta tưởng bản mới đã lên (đúng cái vừa suýt xảy ra).
+
+---
+
 ## 2026-07-16 — Thống kê: thêm % tỷ trọng sau số tiền (Khoa yêu cầu)
 
 **Vấn đề:** Màn Thống kê chỉ hiện số tuyệt đối; Khoa muốn biết mỗi hạng mục/mỗi người chiếm bao

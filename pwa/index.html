@@ -46,6 +46,14 @@
     .tpill.off{color:#6b7280}
     .prog-bg{background:rgba(255,255,255,0.08);border-radius:99px;height:5px}
     .prog-fill{height:5px;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
+    .stat-cat-head{cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .stat-cat-head:active{opacity:.6}
+    .stat-caret{transition:transform .18s;color:#6b7280;font-size:10px;flex-shrink:0;transform:rotate(-90deg);display:inline-block}
+    .stat-cat.open .stat-caret{transform:rotate(0)}
+    .stat-detail{display:none;margin:6px 0 4px 48px;border-left:2px solid rgba(255,255,255,0.07);padding-left:12px}
+    .stat-cat.open .stat-detail{display:block}
+    .stat-detail-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .stat-detail-row:last-child{border-bottom:none}
     .emoji-opt{font-size:1.4rem;padding:4px 2px;border-radius:8px;cursor:pointer;background:transparent;border:none;line-height:1;transition:background .12s}
     .emoji-opt:hover{background:rgba(255,255,255,0.08)}
     .tx-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer}
@@ -1134,14 +1142,35 @@ function renderStats(d, month, year, debts, prev, statRows) {
   // qua tên hạng mục. Tên trong dữ liệu hay lệch danh sách config (đổi tên, thêm chữ "Tiền…",
   // thiếu khoảng trắng) nên đoán theo tên sẽ xếp nhầm ô hoặc rơi mất. Gom theo hạng mục, cộng mọi
   // dấu, rồi chỉ hiện hạng mục có tổng > 0. statRows = các dòng đúng kỳ đang xem (xem loadStats).
-  const caMap = {}, cmMap = {};
+  const caMap = {}, cmMap = {}, caRows = {}, cmRows = {};
   (statRows||[]).forEach(r => {
     if (r.category === 'Thu nhập' || !r.subcategory) return;
-    const bucket = r.category === 'Cá nhân' ? caMap : cmMap;
-    bucket[r.subcategory] = (bucket[r.subcategory] || 0) + r.amount;
+    const isCa = r.category === 'Cá nhân';
+    (isCa ? caMap : cmMap)[r.subcategory] = ((isCa ? caMap : cmMap)[r.subcategory] || 0) + r.amount;
+    const rb = isCa ? caRows : cmRows;
+    (rb[r.subcategory] = rb[r.subcategory] || []).push(r);
   });
   const catsCaNhan  = Object.entries(caMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   const catsChoMuon = Object.entries(cmMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  // Xổ chi tiết giao dịch của 1 hạng mục (bấm vào để mở) — style gọn giống "Giao dịch gần đây"
+  const dmy = s => { const p = (s||'').split('/'); return p.length===3 ? new Date(+p[2], +p[1]-1, +p[0]).getTime() : 0; };
+  const catDetail = (rows, isChoMuon) => {
+    let h = '<div class="stat-detail">';
+    (rows||[]).slice().sort((a,b)=>dmy(b.date)-dmy(a.date)).forEach(r => {
+      const pos = isChoMuon && r.amount > 0;
+      const color = pos ? '#2FD49B' : '#FB6B7C';
+      const sign  = pos ? '+' : (r.amount < 0 ? '−' : '');
+      h += `<div class="stat-detail-row">
+        <div class="flex-1 min-w-0">
+          <p class="text-gray-300 text-xs truncate">${fmtDetail(r.detail)||'(trống)'}</p>
+          <p class="text-gray-600" style="font-size:10px">${r.date} · ${r.name}</p>
+        </div>
+        <span style="color:${color};font-weight:700;font-size:12px;flex-shrink:0">${sign}${fmt(Math.abs(r.amount))}</span>
+      </div>`;
+    });
+    return h + '</div>';
+  };
 
   if (catsCaNhan.length) {
     const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);
@@ -1149,9 +1178,12 @@ function renderStats(d, month, year, debts, prev, statRows) {
     catsCaNhan.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalCaNhan*100);
       const emoji = statEmoji(name, HM_CA_NHAN);
-      html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
-        <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>`;
+      const n = (caRows[name]||[]).length;
+      html += `<div class="stat-cat">
+        <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
+        <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>
+        ${catDetail(caRows[name], false)}</div>`;
     });
     html += `</div></div>`;
   }
@@ -1162,9 +1194,12 @@ function renderStats(d, month, year, debts, prev, statRows) {
     catsChoMuon.forEach(([name,amt]) => {
       const pct = Math.round(amt/totalChoMuon*100);
       const emoji = statEmoji(name, HM_CHO_MUON);
-      html += `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
-        <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>`;
+      const n = (cmRows[name]||[]).length;
+      html += `<div class="stat-cat">
+        <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
+        <div class="flex-1"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
+        <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>
+        ${catDetail(cmRows[name], true)}</div>`;
     });
     html += `</div></div>`;
   }
