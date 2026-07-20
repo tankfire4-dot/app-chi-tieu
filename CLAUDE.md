@@ -2,7 +2,7 @@
 
 ## Cách làm việc
 
-- Xưng hô: **ông** (Claude) / **tôi** (Khoa) — luôn luôn.
+- Xưng hô: agent xưng **tao**, gọi Khoa là **mày** — luôn luôn (Khoa chốt 18/07, xem `AGENTS.md`).
 - Giải thích như báo cáo cho sếp không chuyên IT — tránh jargon kỹ thuật.
 - Đưa khuyến nghị rõ ràng, không liệt kê options trung lập.
 - **Quy tắc vàng:** chỉ thay GIAO DIỆN, **không phá logic JS / chức năng đã hoàn thiện**. Khi áp
@@ -86,7 +86,9 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 
 - **GitHub `tankfire4-dot/app-chi-tieu` = nguồn chính của GIAO DIỆN.** `master` = source code;
   `gh-pages` = bản chạy live tại `https://tankfire4-dot.github.io/app-chi-tieu/`.
-- **`C:\Users\tankf\Desktop\app_chi_tieu`** = bản làm việc trên máy. Sửa ở đây → commit master → deploy.
+- **`C:\Users\tankf\Desktop\agent_lab_khoa\projects\app_chi_tieu`** = bản làm việc trên máy (dời vào
+  lab 16/07/2026, trước đó nằm ngoài Desktop). Sửa ở đây → commit master → **KHOA tự deploy/push**
+  (luật 16/07: mọi thao tác chạm GitHub do Khoa làm, agent dừng ở commit local).
 - **Google Sheet + Apps Script của mỗi user = DỮ LIỆU.** KHÔNG nằm ở GitHub. Mất GitHub → giao diện
   sập (khôi phục được vì code có ở local + master + gh-pages) nhưng **dữ liệu vẫn an toàn** ở Google.
 
@@ -94,6 +96,7 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 
 1. Sửa `pwa/index.html` (và/hoặc CSS, JS) trên máy.
 2. **Bump cache** `chi-tieu-vNN` trong `pwa/sw.js`.
-3. `.\deploy.ps1` → đẩy `pwa/*` lên `gh-pages`.
-4. `git add` + commit + push lên `master` (giữ source đồng bộ với bản chạy).
+3. `git add` + commit LOCAL lên `master` (giữ source đồng bộ với bản chạy).
+4. Ghi lệnh `.\deploy.ps1` + `git push` vào `KHOA.md` → **Khoa tự chạy**. Agent KHÔNG deploy,
+   KHÔNG push (luật CONG GITHUB 16/07, xem `agent_lab_khoa/AGENTS.md`).
 5. Người dùng đóng/mở lại app 1–2 lần để service worker nhận bản mới.
