@@ -87,8 +87,8 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 - **GitHub `tankfire4-dot/app-chi-tieu` = nguồn chính của GIAO DIỆN.** `master` = source code;
   `gh-pages` = bản chạy live tại `https://tankfire4-dot.github.io/app-chi-tieu/`.
 - **`C:\Users\tankf\Desktop\agent_lab_khoa\projects\app_chi_tieu`** = bản làm việc trên máy (dời vào
-  lab 16/07/2026, trước đó nằm ngoài Desktop). Sửa ở đây → commit master → **KHOA tự deploy/push**
-  (luật 16/07: mọi thao tác chạm GitHub do Khoa làm, agent dừng ở commit local).
+  lab 16/07/2026, trước đó nằm ngoài Desktop). Sửa ở đây → commit + **push `master`** (agent được,
+  từ 21/07, nếu repo đã bật Branch protection) → **`gh-pages` thì KHOA tự deploy**, agent không đụng.
 - **Google Sheet + Apps Script của mỗi user = DỮ LIỆU.** KHÔNG nằm ở GitHub. Mất GitHub → giao diện
   sập (khôi phục được vì code có ở local + master + gh-pages) nhưng **dữ liệu vẫn an toàn** ở Google.
 
@@ -96,7 +96,9 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 
 1. Sửa `pwa/index.html` (và/hoặc CSS, JS) trên máy.
 2. **Bump cache** `chi-tieu-vNN` trong `pwa/sw.js`.
-3. `git add` + commit LOCAL lên `master` (giữ source đồng bộ với bản chạy).
-4. Ghi lệnh `.\deploy.ps1` + `git push` vào `KHOA.md` → **Khoa tự chạy**. Agent KHÔNG deploy,
-   KHÔNG push (luật CONG GITHUB 16/07, xem `agent_lab_khoa/AGENTS.md`).
+3. `git add` + commit lên `master`, rồi **push `master`** — được phép từ 21/07, với điều kiện repo
+   đã bật Branch protection; chưa bật thì dừng ở commit local.
+4. **`gh-pages` thì KHÔNG** — đó là app đang chạy thật. Ghi lệnh `.\deploy.ps1` vào `KHOA.md` →
+   **Khoa tự chạy**. Agent không deploy, không `--force`, không xóa nhánh
+   (luật CONG GITHUB 21/07, xem `agent_lab_khoa/AGENTS.md`).
 5. Người dùng đóng/mở lại app 1–2 lần để service worker nhận bản mới.
