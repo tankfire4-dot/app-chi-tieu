@@ -1130,7 +1130,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const ci = x.name.length % AVATAR_COLORS.length;
       html += `<div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
-        <span class="text-gray-200 text-sm flex-1">${x.name}</span>
+        <span class="text-gray-200 text-sm flex-1 min-w-0">${x.name}</span>
         <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}${pctBadge(x.balance, totalDebt)}</span>
       </div>`;
     });
@@ -1181,7 +1181,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const n = (caRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>
         ${catDetail(caRows[name], false)}</div>`;
     });
@@ -1197,7 +1197,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const n = (cmRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>
         ${catDetail(cmRows[name], true)}</div>`;
     });

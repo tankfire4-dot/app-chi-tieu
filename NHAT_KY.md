@@ -12,6 +12,34 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-07-26 — Thống kê: cột % lệch ra ngoài ở dòng có tên hạng mục dài
+
+**Vấn đề:** Khoa chụp màn Thống kê trên điện thoại: dòng "Học tập/ Phát triển bản thân" có
+`1.090.000 13%` **thò ra bên phải**, không thẳng hàng với cột % của 8 dòng còn lại (thanh tiến độ
+của dòng đó cũng dài hơn). Chỉ lỗi thẩm mỹ, nhưng nhìn là thấy gợn.
+
+**Nguyên nhân (đã đo, không đoán):** khối bọc mỗi dòng hạng mục là `<div class="flex-1">` — thiếu
+`min-w-0`. Trong flexbox, một ô con mặc định **không được co nhỏ hơn nội dung tối thiểu của nó**
+(`min-width:auto`). Tên hạng mục dài → ô đó tự nống rộng ra khỏi thẻ thay vì để tên bị cắt bớt →
+số tiền + % bị đẩy lệch sang phải. Số đo ở bề rộng 380px: 8 dòng kết thúc tại x=343, riêng dòng
+"Học tập" tại x=356,3 (thò 13,3px). Ở 320px thì 5/9 dòng lệch — càng màn hẹp càng loạn.
+
+**Quyết định:** thêm `min-w-0` vào 3 chỗ trong `renderStats`/khối công nợ (Chi tiêu cá nhân, Cho
+mượn/Ứng, dòng "Công nợ cần thu"). Ô co lại đúng phần được chia → tên dài bị cắt gọn bằng "…" như
+thiết kế vốn định, cột % thẳng hàng tuyệt đối. Bump cache `chi-tieu-v56`. Không đụng logic JS.
+
+**Kiểm:** dựng lại harness (đúng khối `<style>` + markup y hệt, 9 hạng mục thật trong ảnh Khoa gửi),
+đo mép phải cột % ở 5 bề rộng 320/360/380/393/412px — trước: nhiều mốc khác nhau; sau: **9/9 dòng
+cùng một mốc ở mọi bề rộng**. Chụp ảnh trước/sau đối chiếu.
+
+**Bài học:** mục 16/07 cũng "kiểm mắt bằng harness" và kết luận *"cột %/số tiền thẳng hàng. Đạt"* —
+nhưng harness hồi đó chạy ở cửa sổ rộng ~500px, chỗ mà lỗi **không xuất hiện**. Harness phải chạy ở
+đúng bề rộng điện thoại (320–412px) và **đo bằng số**, chứ nhìn ảnh ở màn rộng thì lỗi ẩn kỹ.
+Kèm theo: hễ dùng `flex-1` mà bên trong có chữ `truncate` thì **phải có `min-w-0`**, nếu không
+`truncate` chỉ là trang trí.
+
+---
+
 ## 2026-07-16 — Thống kê: bấm hạng mục để xổ chi tiết giao dịch + vá deploy.ps1 báo nhầm
 
 **Vấn đề:** Màn Thống kê chỉ hiện tổng mỗi hạng mục; Khoa dùng thấy "thiếu thiếu" — muốn bấm vào
