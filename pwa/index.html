@@ -559,7 +559,7 @@ let HM_THU      = ['💵 Lương','🎁 Thưởng','📦 Thu nhập khác'].map(
 const AVATAR_COLORS = ['bg-indigo-900 text-indigo-300','bg-purple-900 text-purple-300','bg-pink-900 text-pink-300','bg-orange-900 text-orange-300','bg-teal-900 text-teal-300','bg-amber-900 text-amber-300','bg-rose-900 text-rose-300','bg-emerald-900 text-emerald-300','bg-blue-900 text-blue-300','bg-cyan-900 text-cyan-300'];
 
 // ============ STATE ============
-let S = { url:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
+let S = { url:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, lastRowVerify:null, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
 
 // ============ CACHE ============
 const CACHE_TTL = { getRows: 60, getDebts: 120, getStats: 300, getConfig: 86400 };
@@ -812,11 +812,11 @@ function renderRows() {
       const amtSign  = (isIncome || (isChoMuon && r.amount > 0)) ? '+' : (isChoMuon && r.amount < 0 ? '-' : '');
       const collIcon = (r.category==='Cho mượn/ Ứng' && !r.collected && r.amount>0)
         ? '<span style="color:#f59e0b;font-size:12px;margin-left:4px;">●</span>' : '';
-      html += `<div class="tx-row" onclick='openTxDetail(${JSON.stringify(r)})'>
+      html += `<div class="tx-row" onclick='openTxDetail(${esc(JSON.stringify(r))})'>
         <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:21px;">${emoji}</div>
         <div class="flex-1 min-w-0">
-          <p class="text-white text-sm font-semibold truncate">${fmtDetail(r.detail)||'(trống)'}</p>
-          <p class="text-gray-500 text-xs">${r.name}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${r.subcategory||r.category}</span></p>
+          <p class="text-white text-sm font-semibold truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
+          <p class="text-gray-500 text-xs">${esc(r.name)}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${esc(r.subcategory||r.category)}</span></p>
         </div>
         <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}</p>
       </div>`;
@@ -875,9 +875,9 @@ function renderDebts() {
       const oweSub = gNeg > 0
         ? `${fmt(gPos)} − ${fmt(gNeg)} đối trừ = ${fmt(d.balance)}`
         : `${d.rows.length} khoản chưa thu`;
-      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
-        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
-        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs truncate">${oweSub}</p></div>
+      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${esc(JSON.stringify(d))})'>
+        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${esc(initial)}</div>
+        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${esc(d.name)}</p><p class="text-gray-500 text-xs truncate">${oweSub}</p></div>
         <div class="text-right flex-shrink-0"><p class="text-emerald-400 font-bold">+${fmt(d.balance)}</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
       </div>`;
     });
@@ -891,9 +891,9 @@ function renderDebts() {
       const initial = d.name.trim().split(' ').pop()[0].toUpperCase();
       const ci = d.name.length % AVATAR_COLORS.length;
       const border = i<owed.length-1 ? 'border-b' : '';
-      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${JSON.stringify(d)})'>
-        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
-        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${d.name}</p><p class="text-gray-500 text-xs">${(()=>{const gN=d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);const gP=d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);return gP>0?`${fmt(gN)} − ${fmt(gP)} đối trừ = ${fmt(Math.abs(d.balance))} còn`:`${fmt(Math.abs(d.balance))} còn nợ`;})()} </p></div>
+      html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06);cursor:pointer" onclick='openDebtSheet(${esc(JSON.stringify(d))})'>
+        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${esc(initial)}</div>
+        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm">${esc(d.name)}</p><p class="text-gray-500 text-xs">${(()=>{const gN=d.rows.filter(r=>r.amount<0).reduce((a,r)=>a+Math.abs(r.amount),0);const gP=d.rows.filter(r=>r.amount>0).reduce((a,r)=>a+r.amount,0);return gP>0?`${fmt(gN)} − ${fmt(gP)} đối trừ = ${fmt(Math.abs(d.balance))} còn`:`${fmt(Math.abs(d.balance))} còn nợ`;})()} </p></div>
         <div class="text-right flex-shrink-0"><p class="text-red-400 font-bold">-${fmt(Math.abs(d.balance))}</p><p class="text-gray-600 text-xs mt-0.5">Chi tiết →</p></div>
       </div>`;
     });
@@ -915,9 +915,9 @@ function renderDebts() {
       const border = i<rc.length-1 ? 'border-b' : '';
       const dirText = r.amount > 0 ? 'đã thu' : 'đã trả';
       html += `<div class="flex items-center gap-3 p-4 ${border}" style="border-color:rgba(255,255,255,0.06)">
-        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}" style="opacity:.7">${initial}</div>
+        <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}" style="opacity:.7">${esc(initial)}</div>
         <div class="flex-1 min-w-0">
-          <p class="text-white font-semibold text-sm truncate">${r.name} <span class="text-gray-500 font-normal">· ${fmtDetail(r.detail)||'(trống)'}</span></p>
+          <p class="text-white font-semibold text-sm truncate">${esc(r.name)} <span class="text-gray-500 font-normal">· ${esc(fmtDetail(r.detail))||'(trống)'}</span></p>
           <p class="text-gray-500 text-xs">${r.date} → ${dirText} <span class="text-emerald-500">${r.collectedDate}</span></p>
         </div>
         <span class="text-gray-400 font-bold text-sm flex-shrink-0">${fmt(Math.abs(r.amount))}</span>
@@ -1129,8 +1129,8 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const initial = x.name.trim().split(' ').pop()[0].toUpperCase();
       const ci = x.name.length % AVATAR_COLORS.length;
       html += `<div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${initial}</div>
-        <span class="text-gray-200 text-sm flex-1 min-w-0">${x.name}</span>
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[ci]}">${esc(initial)}</div>
+        <span class="text-gray-200 text-sm flex-1 min-w-0">${esc(x.name)}</span>
         <span class="text-emerald-400 text-sm font-bold">+${fmt(x.balance)}${pctBadge(x.balance, totalDebt)}</span>
       </div>`;
     });
@@ -1163,8 +1163,8 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const sign  = pos ? '+' : (r.amount < 0 ? '−' : '');
       h += `<div class="stat-detail-row">
         <div class="flex-1 min-w-0">
-          <p class="text-gray-300 text-xs truncate">${fmtDetail(r.detail)||'(trống)'}</p>
-          <p class="text-gray-600" style="font-size:10px">${r.date} · ${r.name}</p>
+          <p class="text-gray-300 text-xs truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
+          <p class="text-gray-600" style="font-size:10px">${r.date} · ${esc(r.name)}</p>
         </div>
         <span style="color:${color};font-weight:700;font-size:12px;flex-shrink:0">${sign}${fmt(Math.abs(r.amount))}</span>
       </div>`;
@@ -1181,7 +1181,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const n = (caRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>
         ${catDetail(caRows[name], false)}</div>`;
     });
@@ -1197,7 +1197,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const n = (cmRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${name}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>
         ${catDetail(cmRows[name], true)}</div>`;
     });
@@ -1279,16 +1279,19 @@ function switchTab(idx) {
 function initPeopleChips() {
   S.selectedPerson0 = OWNER;
 
-  // Tab 0: single select, all people
+  // Tab 0: single select, all people. Tên đi qua data-name (esc) chứ không nhét vào chuỗi JS
+  // trong onclick — tên có dấu ' sẽ phá cú pháp dù đã escape entity (browser giải entity
+  // TRƯỚC khi parse JS).
   const pc0 = document.getElementById('pc0');
-  pc0.innerHTML = PEOPLE.map(p => `<span class="chip ${p===OWNER?'chip-on':'chip-off'}" onclick="selectPerson0(this,'${p}')">${p}</span>`).join('');
+  pc0.innerHTML = PEOPLE.map(p => `<span class="chip ${p===OWNER?'chip-on':'chip-off'}" data-name="${esc(p)}" onclick="selectPerson0(this)">${esc(p)}</span>`).join('');
 
   // Tab 1: multi select, chủ app fixed
   const pc1 = document.getElementById('pc1');
-  pc1.innerHTML = PEOPLE.map(p => `<span class="chip ${p===OWNER?'chip-on':'chip-off'}" ${p===OWNER?'style="opacity:.6;pointer-events:none"':''} onclick="toggleSplit(this)">${p}</span>`).join('');
+  pc1.innerHTML = PEOPLE.map(p => `<span class="chip ${p===OWNER?'chip-on':'chip-off'}" ${p===OWNER?'style="opacity:.6;pointer-events:none"':''} data-name="${esc(p)}" onclick="toggleSplit(this)">${esc(p)}</span>`).join('');
 }
 
-function selectPerson0(el, name) {
+function selectPerson0(el) {
+  const name = el.dataset.name;
   document.querySelectorAll('#pc0 .chip').forEach(c=>{c.classList.remove('chip-on');c.classList.add('chip-off');});
   el.classList.add('chip-on'); el.classList.remove('chip-off');
   S.selectedPerson0 = name;
@@ -1349,7 +1352,7 @@ function initHangMuc() {
 
 function renderHM(id, list) {
   document.getElementById(id).innerHTML = list.map(h =>
-    `<span class="chip chip-off" data-name="${h.name}" onclick="selectHM(this,'${id}')">${h.label}</span>`
+    `<span class="chip chip-off" data-name="${esc(h.name)}" onclick="selectHM(this,'${id}')">${esc(h.label)}</span>`
   ).join('');
 }
 
@@ -1391,7 +1394,7 @@ function calcSplit() {
   const count = document.querySelectorAll('#pc1 .chip-on').length;
   const box = document.getElementById('split-box');
   if(!total||!count){ box.innerHTML='<p class="text-indigo-400 text-sm font-semibold">Chọn người để tính</p>'; return; }
-  const per = Math.ceil(total/count);
+  const per = Math.round(total/count);   // khớp backend addSplit (Math.round), hết lệch vài đồng
   box.innerHTML=`<p class="text-indigo-400 text-sm font-semibold">${count} người · mỗi người <span class="text-white font-bold">${fmt(per)}</span></p>`;
 }
 
@@ -1434,11 +1437,13 @@ async function submit0() {
       try {
         const res = await api({ action:'addFronted', person:S.selectedPerson0, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
         S.lastRowIndex = res.firstRow; S.lastRowCount = 2; S.lastRowTime = Date.now();
+        S.lastRowVerify = { name:OWNER, amount:amt };   // dòng đầu block = mình chi (Code.gs addFronted)
       } catch(eF) {
         if (!/Unknown action/i.test(eF.message)) throw eF;   // lỗi thật (vd 404) → không fallback, tránh ghi trùng
         const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
         await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:sub });
         S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
+        S.lastRowVerify = { name:OWNER, amount:amt };
       }
       resetTab(0); goBack();
       setTimeout(()=>showToast('Đã ghi — chi của bạn + bạn nợ họ ✓','ok'),200);
@@ -1446,6 +1451,7 @@ async function submit0() {
       // Vay tiền mặt → 1 dòng nợ duy nhất (số dư tự tăng, không tính chi tiêu)
       const r1 = await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Vay tiền mặt', amount:-amt, subcategory:getHM('hm0') });
       S.lastRowIndex = r1.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
+      S.lastRowVerify = { name:S.selectedPerson0, amount:-amt };   // dòng nợ ghi số ÂM
       resetTab(0); goBack();
       setTimeout(()=>showToast('Đã ghi — vay tiền mặt, bạn nợ họ ✓','ok'),200);
     } else {
@@ -1454,6 +1460,7 @@ async function submit0() {
         : { action:'addRow', name:S.selectedPerson0, detail:detail||'Chi tiêu', amount:amt, subcategory:getHM('hm0') };
       const res = await api(params);
       S.lastRowIndex = res.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
+      S.lastRowVerify = { name: isThu ? OWNER : S.selectedPerson0, amount:amt };
       resetTab(0); goBack();
       setTimeout(()=>showToast(isThu ? 'Đã ghi thu nhập ✓' : 'Đã ghi thành công ✓','ok'),200);
     }
@@ -1464,13 +1471,16 @@ async function submit0() {
 async function submit1() {
   const amt = parseInt(S.amts[1]||'0');
   if(!amt) { showToast('Nhập số tiền','err'); return; }
-  const people = [...document.querySelectorAll('#pc1 .chip-on')].map(c=>c.textContent);
+  const people = [...document.querySelectorAll('#pc1 .chip-on')].map(c=>c.dataset.name);
   if(people.length<2) { showToast('Chọn ít nhất 2 người','err'); return; }
   const btn = document.getElementById('btn1');
   setLoading(btn, true);
   try {
     const res = await api({ action:'addSplit', detail: document.getElementById('dt1').value||'Chia bill', amount:amt, people:people.join('|'), subcategory: getHM('hm1') });
     S.lastRowIndex = res.firstRow; S.lastRowCount = res.rowsAdded; S.lastRowTime = Date.now();
+    // Dòng đầu block = people[0] nhận phần dư làm tròn (khớp Code.gs addSplit: per + rem)
+    const per = res.perPerson, rem = amt - per*people.length;
+    S.lastRowVerify = { name:people[0], amount:per + rem };
     resetTab(1); goBack();
     setTimeout(()=>showToast('Đã chia bill thành công ✓','ok'),200);
   } catch(e) { showToast('Lỗi: '+e.message,'err'); }
@@ -1490,8 +1500,12 @@ async function doUndo() {
   if(!S.lastRowIndex || !S.lastRowTime) return;
   if(Date.now()-S.lastRowTime > 60000) { showToast('Quá 1 phút, không thể undo','err'); return; }
   try {
-    await api({ action:'deleteRow', rowIndex:S.lastRowIndex, count:S.lastRowCount });
-    S.lastRowTime=0; S.lastRowIndex=0;
+    // Gửi kèm tên + số tiền dòng đầu block vừa ghi — backend so khớp mới xóa (chống xóa
+    // nhầm khi Sheet bị xê dịch dòng trong 60s; backend chỉ verify được dòng đầu của block).
+    const params = { action:'deleteRow', rowIndex:S.lastRowIndex, count:S.lastRowCount };
+    if(S.lastRowVerify) { params.verifyName = S.lastRowVerify.name; params.verifyAmount = S.lastRowVerify.amount; }
+    await api(params);
+    S.lastRowTime=0; S.lastRowIndex=0; S.lastRowVerify=null;
     showToast('Đã xóa dòng vừa ghi ✓','ok');
     loadHome();
   } catch(e) { showToast('Undo thất bại: '+e.message,'err'); }
@@ -1558,8 +1572,8 @@ function openEdit() {
   document.getElementById('ed-amount').value = r.amount;
   // Dòng Thu nhập: không đổi người được
   document.getElementById('ed-name').innerHTML = isIncome
-    ? `<option selected>${r.name} (Thu nhập)</option>`
-    : PEOPLE.map(p=>`<option ${p===r.name?'selected':''}>${p}</option>`).join('');
+    ? `<option selected>${esc(r.name)} (Thu nhập)</option>`
+    : PEOPLE.map(p=>`<option ${p===r.name?'selected':''}>${esc(p)}</option>`).join('');
   document.getElementById('ed-name').disabled = isIncome;
   edSyncHM(r.subcategory);
   openBs('bs-edit');
@@ -1573,18 +1587,21 @@ function edSyncHM(selected) {
   const cur  = typeof selected==='string' ? selected : (r ? r.subcategory : '');
   document.getElementById('ed-sub').innerHTML =
     `<option value="">(không có)</option>` +
-    list.map(h=>`<option value="${h.name}" ${h.name===cur?'selected':''}>${h.label}</option>`).join('');
+    list.map(h=>`<option value="${esc(h.name)}" ${h.name===cur?'selected':''}>${esc(h.label)}</option>`).join('');
 }
 
 async function saveEdit() {
   const r = S.curTx; if(!r) return;
+  // Ô tiền trống/0 → chặn, không âm thầm lưu 0 đồng (số âm = được trả lại vẫn hợp lệ)
+  const amtV = parseInt(document.getElementById('ed-amount').value);
+  if(!amtV) { showToast('Nhập số tiền','err'); return; }
   const btn = document.getElementById('ed-save');
   setLoading(btn, true);
   try {
     const params = {
       action:'editRow', rowIndex:r.rowIndex,
       detail:      document.getElementById('ed-detail').value,
-      amount:      parseInt(document.getElementById('ed-amount').value||'0'),
+      amount:      amtV,
       subcategory: document.getElementById('ed-sub').value,
       // Xác minh: tên + số tiền TRƯỚC KHI SỬA (cái app đang thấy) — backend so lại rồi mới
       // cho sửa, chống sửa nhầm dòng khác khi Sheet bị xê dịch.
@@ -1701,7 +1718,7 @@ function openDebtSheet(d) {
         style="width:18px;height:18px;accent-color:#2FD49B;flex-shrink:0;cursor:pointer">
       <div class="flex-1 min-w-0">
         <p class="text-xs mb-0.5" style="color:#9ca3af">${r.date}</p>
-        <p class="text-sm truncate" style="color:#d1d5db">${fmtDetail(r.detail)||'(trống)'}</p>
+        <p class="text-sm truncate" style="color:#d1d5db">${esc(fmtDetail(r.detail))||'(trống)'}</p>
       </div>
       <span class="${col} text-sm font-bold flex-shrink-0" style="margin-top:2px">${sign}${fmt(Math.abs(r.amount))}</span>
     </label>`;
@@ -1747,6 +1764,10 @@ function showToast(msg, type) {
 
 // ============ FORMAT ============
 function fmt(n) { return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+// Escape dữ liệu (tên, chi tiết…) trước khi nhét vào chuỗi HTML — dấu ' phá attribute
+// onclick, < > thành thẻ thật. Payload JSON trong onclick cũng bọc esc: browser giải
+// entity trước khi parse JS nên JSON về nguyên vẹn, còn attribute thì không vỡ.
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function fmtDetail(s) { return (s||'').replace(/(\d{4,})đ/g, n => n.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.')); }
 
 // Tra emoji cho 1 tên hạng mục (lấy từ dữ liệu — có thể lệch tên config): chọn hạng mục config trùng

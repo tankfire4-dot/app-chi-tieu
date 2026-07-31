@@ -98,7 +98,12 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 2. **Bump cache** `chi-tieu-vNN` trong `pwa/sw.js`.
 3. `git add` + commit lên `master`, rồi **push `master`** — được phép từ 21/07, với điều kiện repo
    đã bật Branch protection; chưa bật thì dừng ở commit local.
-4. **`gh-pages` thì KHÔNG** — đó là app đang chạy thật. Ghi lệnh `.\deploy.ps1` vào `KHOA.md` →
-   **Khoa tự chạy**. Agent không deploy, không `--force`, không xóa nhánh
+4. **`gh-pages` thì KHÔNG** — đó là app đang chạy thật. Ghi lệnh deploy vào `KHOA.md` →
+   **Khoa tự chạy**. Lệnh phải ghi ĐẦY ĐỦ dạng này, vì máy Khoa khóa chạy script `.ps1`
+   (`ExecutionPolicy` Restricted — gõ `.\deploy.ps1` trần là báo lỗi đỏ, đã vấp 26/07), và
+   ghi **đường dẫn đầy đủ** chứ không phải `.\` (Khoa hay đứng ở thư mục lab, `.\` là lỗi thứ hai
+   vấp cùng ngày). Script tự lấy `$PSScriptRoot` nên không cần `cd`:
+   `powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\tankf\Desktop\agent_lab_khoa\projects\app_chi_tieu\deploy.ps1"`
+   Agent không deploy, không `--force`, không xóa nhánh
    (luật CONG GITHUB 21/07, xem `agent_lab_khoa/AGENTS.md`).
 5. Người dùng đóng/mở lại app 1–2 lần để service worker nhận bản mới.
