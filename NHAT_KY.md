@@ -12,6 +12,67 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-08-30 — Thống kê: % phải trên THU NHẬP, và "Tất cả năm" phải đọc đủ sổ
+
+**Vấn đề (Khoa nêu, Codex chẩn, Claude soát lại tận dòng — cả 3 đúng):**
+
+1. **% trả lời sai câu hỏi.** Khoa hỏi "ăn uống chiếm mấy phần lương tôi?", app lại trả lời "ăn
+   uống chiếm mấy phần tiền tôi đã tiêu" — mỗi khối chia cho tổng của chính nó (`totalCaNhan` /
+   `totalChoMuon`). Thu 10tr, tiêu 5tr (ăn 2, nhà 3) → app ghi ăn **40%**, nhà **60%**, cộng luôn
+   tròn 100%. Chính cái 100% tròn trịa đó là dấu hiệu chia sai.
+2. **"Tất cả năm" chỉ xem được 500 giao dịch.** Frontend xin `getRows limit=500`, backend còn chốt
+   cứng `Math.min(limit, 500)` và lấy từ `last - limit + 1` — tức 500 dòng **mới nhất**, nên cắt
+   đúng phần **cũ nhất**, im lặng không báo.
+3. **Nửa trên và nửa dưới màn đọc hai quyển sổ khác nhau.** Cùng lúc đó `getStats` nhận `year=''`
+   rồi backend tự đoán `p.year || năm hiện tại` → thẻ tổng chỉ cộng năm nay, trong khi khối hạng
+   mục lấy 500 dòng vắt qua nhiều năm. Tử số một kỳ, mẫu số một kỳ.
+
+**Quyết định:**
+
+- Hai khối hạng mục chia cho `d.totalIncome` của **đúng kỳ đang xem**. Badge được phép vượt 100%
+  (đó là cảnh báo thật: tiêu quá thu), nhưng bề rộng thanh kẹp `0..100%` để không tràn thẻ.
+  Thu nhập `<= 0` → badge `—`, thanh `0%` (cấm NaN/Infinity). Thêm chú thích nhìn thấy được
+  **"% trên thu nhập kỳ đang xem"** ở cả hai khối.
+- Thêm **hợp đồng phạm vi `scope=all`** cho cả `getRows` và `getStats`. "Tất cả năm" phải nói rõ
+  bằng cờ, KHÔNG dùng `year=''` để backend đoán. Caller cũ không truyền cờ thì hành vi y như trước
+  (getRows giữ limit mặc định, getStats vẫn mặc định năm hiện tại) — không biến mọi màn thành tải
+  toàn Sheet.
+- `loadStats` chỉ vẽ từ cache khi **có đủ cặp** (tổng + rows), và không nuốt lỗi của `getRows` nữa.
+- Công nợ vẫn chia trên tổng nợ; Tiết kiệm và "so tháng trước" giữ nguyên công thức. Bump `v58`.
+
+**Vì sao làm vậy:**
+
+- Chia trên tổng khối thì các % luôn cộng thành 100% — nó chỉ mô tả cơ cấu chi, không bao giờ trả
+  lời được câu hỏi Khoa thật sự hỏi. Đổi **mẫu số**, giữ nguyên tử số và cách gom, nên không phải
+  thiết kế lại công nợ.
+- Cờ `scope=all` tường minh chặn được cả một lớp lỗi: hễ frontend im lặng thì backend đoán, mà mỗi
+  API đoán một kiểu là hai nửa màn hình lệch nhau. Không đoán nữa thì không lệch được.
+- Cache nửa vời rất dễ xảy ra: `cacheSet` nuốt lỗi hết quota localStorage im lặng, mà bộ all-years
+  thì to. Thiếu rows mà vẫn vẽ = màn có thẻ tổng còn hạng mục trống trơn, nhìn như kỳ đó không tiêu
+  gì — sai nguy hiểm hơn là báo lỗi.
+
+**Bằng chứng:** `tests/stats.test.mjs` **44/44** (Node built-in, nạp và chạy chính `Code.gs` +
+khối `<script>` của `index.html` trong `node:vm`, Sheet giả và DOM giả, `fetch` giả nối hai đầu —
+không chép công thức vào test). Đã **thử phá 3 lần để chứng minh test không phải bù nhìn**: trả mẫu
+số về tổng khối → đỏ 8 chỗ và tái hiện đúng con số 40%/60% cũ; trả frontend về `limit:'500'` → đỏ;
+tắt `scope` ở backend → đỏ 4 chỗ, `Legacy` biến mất y như bệnh cũ.
+`tests/stats.browser.js` **30/30** ở 320/393/412px bằng Chromium có sẵn (ảnh `tests/anh-qa/`).
+
+**Bài học / Rủi ro:**
+
+- **Đo DOM đạt không có nghĩa là mắt thấy đúng.** Lần chụp đầu ra nguyên màn splash mà 30 phép đo
+  vẫn xanh: `go('stats')` tự gọi `loadStats()`, nó chạy sau và đè lên màn vẽ tay. Phải cắm fixture
+  vào `window.fetch` rồi để app tự chạy đường thật, và luôn MỞ ẢNH RA NHÌN.
+- `.screen` là `position:fixed; overflow-y:auto` → `fullPage: true` **không** với tới phần cuộn bên
+  dưới; phải cuộn `#s-stats` rồi chụp nhịp hai.
+- **Lỗi có sẵn, CHƯA sửa (ngoài phạm vi mẻ này):** ở 320px, số trong hai thẻ tổng bị cắt cụt khi
+  tiền từ 8 chữ số trở lên (`numSize` chỉ hạ cỡ khi chuỗi ≥ 11 ký tự). Khối "Chi tiêu 7 ngày qua"
+  đọc `S.rows` = rows **tháng hiện tại**, nên mấy ngày đầu tháng nó mất phần cuối tháng trước.
+- **`pwa/Code.gs` trong repo ≠ bản đang chạy** (bẫy #4, `CLAUDE.md`): sửa xong phải dán tay vào
+  Apps Script rồi sửa deployment CŨ → Phiên bản mới, nếu không thì "Tất cả năm" vẫn hỏng như cũ.
+
+---
+
 ## 2026-07-26 — Thống kê: cột % lệch ra ngoài ở dòng có tên hạng mục dài
 
 **Vấn đề:** Khoa chụp màn Thống kê trên điện thoại: dòng "Học tập/ Phát triển bản thân" có
@@ -336,10 +397,10 @@ sếp biết năng lực nhân viên. Đồng thời nhờ kiểm tra & dọn c�
 1. Chốt **nguyên tắc làm việc** vào CLAUDE.md: việc dọn dẹp/sửa lỗi hợp lý thì Claude cứ chủ động làm,
    không hỏi vặt, ĐỔI LẠI phải ghi "làm gì + vì sao" vào NHAT_KY.md. Repo chưa đủ context thì chỉ
    kiểm tra + báo cáo, không tự sửa.
-2. **Khảo sát 4 repo trên máy:** `app_chi_tieu` (đang làm), `lehai-tools`, `Company_OS`,
+2. **Khảo sát 4 repo trên máy:** `app-chi-tieu` (đang làm), `lehai-tools`, `company-os`,
    `fb-auto-post`. Ba repo sau đều sạch & đã push, RIÊNG `fb-auto-post` đang sửa dở 1 file
    (`src/main.action.js`) → **không đụng** (việc dở của dự án khác).
-3. **Dọn `app_chi_tieu`:** gỡ `demo_ui.html`, `apps_script/` (bot Telegram cũ), `flutter_app/` (12
+3. **Dọn `app-chi-tieu`:** gỡ `demo_ui.html`, `apps_script/` (bot Telegram cũ), `flutter_app/` (12
    file Flutter bỏ dở) — đã grep xác nhận `pwa/` không tham chiếu gì tới chúng.
 
 **Vì sao:** Repo này giờ thuần PWA; giữ đám di sản chỉ làm rối người đọc (nhất là người không rành

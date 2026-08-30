@@ -960,11 +960,15 @@ async function loadStats() {
   if (!year) { mSel.value = ''; mSel.style.opacity='0.4'; mSel.style.pointerEvents='none'; }
   else        { mSel.style.opacity=''; mSel.style.pointerEvents=''; }
   const month = mSel.value;
-  const p  = {action:'getStats', month, year};
+  // HỢP ĐỒNG PHẠM VI THỜI GIAN — "Tất cả năm" phải nói RÕ bằng cờ scope=all.
+  // KHÔNG dùng year='' để backend tự đoán: backend đoán ra năm hiện tại, nên thẻ tổng chỉ cộng năm
+  // nay trong khi khối hạng mục lấy nhiều năm → tử số và mẫu số của phép chia % là hai kỳ khác nhau.
+  // getStats và getRows LUÔN xin cùng một phạm vi, không bao giờ lệch.
+  const allYears = !year;
+  const p  = allYears ? {action:'getStats', scope:'all'} : {action:'getStats', month, year};
   const pd = {action:'getDebts'};
   // Lấy các dòng đúng kỳ để tách Cá nhân/Cho mượn theo phân loại thật (xem renderStats).
-  // "Tất cả năm" (không tháng/năm) → backend trả gần nhất, xin nhiều hơn (tối đa 500).
-  const pr = (!month && !year) ? {action:'getRows', limit:'500'} : {action:'getRows', month, year};
+  const pr = allYears ? {action:'getRows', scope:'all'} : {action:'getRows', month, year};
   // Tháng trước để so sánh (chỉ khi chọn 1 tháng cụ thể)
   let pPrev = null;
   if (month && year) {
@@ -976,17 +980,25 @@ async function loadStats() {
   const cachedD = cacheGet(pd);
   const cachedR = cacheGet(pr);
   const debts0  = cachedD ? cachedD.debts : S.debts;
-  if (cached) { renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null, cachedR?cachedR.rows:[]); }
+  // Chỉ vẽ từ cache khi CÓ ĐỦ CẶP (tổng + rows). Thiếu một vế mà vẫn vẽ thì ra màn "thẻ tổng có số,
+  // hai khối hạng mục trống trơn" — nhìn như kỳ đó không tiêu gì. Thiếu một vế là chuyện có thật:
+  // cacheSet nuốt lỗi hết quota localStorage im lặng, mà bộ all-years thì to.
+  const cachedPair = !!(cached && cachedR);
+  if (cachedPair) renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null, cachedR.rows || []);
   else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
   try {
     const [d, dd, dprev, dr] = await Promise.all([
       api(p),
       api(pd).catch(()=>({debts:debts0})),
       pPrev ? api(pPrev).catch(()=>null) : Promise.resolve(null),
-      api(pr).catch(()=>({rows:[]}))
+      api(pr)   // KHÔNG nuốt lỗi: mất rows là mất nửa màn, thà báo lỗi còn hơn vẽ nửa đúng nửa thiếu
     ]);
     renderStats(d, month, year, dd.debts || [], dprev, dr.rows || []);
-  } catch(e) { if(!cached) showToast('Lỗi tải thống kê','err'); }
+  } catch(e) {
+    showToast('Lỗi tải thống kê','err');
+    if (!cachedPair) document.getElementById('stats-content').innerHTML =
+      '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
+  }
 }
 
 function renderStats(d, month, year, debts, prev, statRows) {
@@ -1015,10 +1027,26 @@ function renderStats(d, month, year, debts, prev, statRows) {
   const totalDebt = debtList.reduce((a,x)=>a+x.balance,0);
 
   // Nhãn % tỷ trọng đặt sau số tiền — bề rộng cố định để cột % thẳng hàng giữa các dòng
+  const badgeHtml = (txt) => `<span class="text-gray-500" style="font-size:11px;font-weight:600;display:inline-block;min-width:33px;text-align:right">${txt}</span>`;
+  // Dùng cho khối CÔNG NỢ: từng người trên tổng nợ (giữ nguyên, không đổi sang thu nhập)
   const pctBadge = (amt, total) => {
     if (!total) return '';
     const p = Math.round(amt / total * 100);
-    return `<span class="text-gray-500" style="font-size:11px;font-weight:600;display:inline-block;min-width:33px;text-align:right">${p < 1 ? '&lt;1%' : p + '%'}</span>`;
+    return badgeHtml(p < 1 ? '&lt;1%' : p + '%');
+  };
+
+  // Dùng cho HAI KHỐI HẠNG MỤC: hạng mục này bằng bao nhiêu phần trăm TỔNG THU NHẬP của đúng kỳ
+  // đang xem — KHÔNG phải phần trăm của tổng khối. Chia cho tổng khối thì các % luôn cộng thành
+  // 100% và không trả lời được câu hỏi "ăn uống ngốn mấy phần lương tháng này".
+  // Trả {label, width}: label được phép vượt 100% (đó là cảnh báo thật — tiêu quá thu);
+  // width luôn kẹp 0..100 để thanh không tràn khỏi thẻ. Thu nhập <= 0 → '—' và 0%, cấm NaN/Infinity.
+  const pctOfIncome = (amt) => {
+    if (!(income > 0)) return { label: '—', width: 0 };
+    const raw = amt / income * 100;
+    return {
+      label: (raw > 0 && raw < 1) ? '&lt;1%' : Math.round(raw) + '%',
+      width: Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10
+    };
   };
 
   // Block 0: 2 thẻ tổng (Tổng chi / Thu nhập) — theo bản Claude Design
@@ -1174,15 +1202,16 @@ function renderStats(d, month, year, debts, prev, statRows) {
 
   if (catsCaNhan.length) {
     const totalCaNhan = catsCaNhan.reduce((s,[,v])=>s+v, 0);
-    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}</span></div><div class="space-y-3">`;
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-1"><p class="text-white font-semibold">Chi tiêu cá nhân</p><span class="text-white font-bold text-sm">${fmt(totalCaNhan)}</span></div>
+      <p class="text-gray-500 text-xs" style="margin-bottom:14px">% trên thu nhập kỳ đang xem</p><div class="space-y-3">`;
     catsCaNhan.forEach(([name,amt]) => {
-      const pct = Math.round(amt/totalCaNhan*100);
+      const b = pctOfIncome(amt);
       const emoji = statEmoji(name, HM_CA_NHAN);
       const n = (caRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalCaNhan)}</span></div>
-        <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${pct}%"></div></div></div></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${badgeHtml(b.label)}</span></div>
+        <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${b.width}%"></div></div></div></div>
         ${catDetail(caRows[name], false)}</div>`;
     });
     html += `</div></div>`;
@@ -1190,15 +1219,16 @@ function renderStats(d, month, year, debts, prev, statRows) {
 
   if (catsChoMuon.length) {
     const totalChoMuon = catsChoMuon.reduce((s,[,v])=>s+v, 0);
-    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-3"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}</span></div><div class="space-y-3">`;
+    html += `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between items-baseline mb-1"><p class="text-white font-semibold">Cho mượn / Ứng</p><span class="text-emerald-400 font-bold text-sm">${fmt(totalChoMuon)}</span></div>
+      <p class="text-gray-500 text-xs" style="margin-bottom:14px">% trên thu nhập kỳ đang xem</p><div class="space-y-3">`;
     catsChoMuon.forEach(([name,amt]) => {
-      const pct = Math.round(amt/totalChoMuon*100);
+      const b = pctOfIncome(amt);
       const emoji = statEmoji(name, HM_CHO_MUON);
       const n = (cmRows[name]||[]).length;
       html += `<div class="stat-cat">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
-        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${pctBadge(amt, totalChoMuon)}</span></div>
-        <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${pct}%"></div></div></div></div>
+        <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${badgeHtml(b.label)}</span></div>
+        <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${b.width}%"></div></div></div></div>
         ${catDetail(cmRows[name], true)}</div>`;
     });
     html += `</div></div>`;

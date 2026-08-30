@@ -285,14 +285,20 @@ function doGet(e) {
 
         var month = p.month || "";
         var year  = p.year  || "";
+        // scope=all: TOÀN BỘ lịch sử, có chủ ý, KHÔNG cap 500. Phải xin rõ bằng cờ này — trước đây
+        // màn Thống kê "Tất cả năm" xin limit=500 nên chỉ lấy 500 dòng MỚI NHẤT, cắt mất phần cũ
+        // nhất mà không báo gì. Caller nào không truyền cờ thì giữ nguyên giới hạn mặc định bên dưới.
+        var scopeAll = String(p.scope || "") === "all";
 
-        if (month || year) {
+        if (scopeAll || month || year) {
           var data = sheet.getRange(2, 1, last - 1, 8).getValues();
           var rows = [];
           data.forEach(function(row, i) {
             var d = dateStr(row[0]);
-            if (month && d.slice(3, 5) !== month) return;
-            if (year  && d.slice(6, 10) !== year)  return;
+            if (!scopeAll) {
+              if (month && d.slice(3, 5) !== month) return;
+              if (year  && d.slice(6, 10) !== year)  return;
+            }
             rows.push({
               rowIndex:      i + 2,
               date:          d,
@@ -305,7 +311,7 @@ function doGet(e) {
               collectedDate: row[7] ? dateStr(row[7]) : ""
             });
           });
-          return ok({ rows: rows.reverse() });
+          return ok({ rows: rows.reverse(), scope: scopeAll ? "all" : "" });
         }
 
         var limit = Math.min(parseInt(p.limit || "100"), 500);
@@ -497,11 +503,16 @@ function doGet(e) {
 
       // ── Thống kê theo tháng ────────────────────────────────
       case "getStats": {
-        var month = p.month || "";
-        var year  = p.year  || String(new Date().getFullYear());
+        // scope=all: cộng TOÀN BỘ lịch sử, không rơi về năm hiện tại. Trước đây "Tất cả năm" gửi
+        // year='' rồi backend tự đoán ra năm nay, nên thẻ tổng phía trên và khối hạng mục phía dưới
+        // cùng màn lại là hai kỳ khác nhau — tử số một kỳ, mẫu số một kỳ. Caller cũ không truyền cờ
+        // thì vẫn mặc định năm hiện tại y như trước.
+        var scopeAll = String(p.scope || "") === "all";
+        var month = scopeAll ? "" : (p.month || "");
+        var year  = scopeAll ? "" : (p.year  || String(new Date().getFullYear()));
         var sheet = getSheet();
         var last  = sheet.getLastRow();
-        if (last < 2) return ok({ total: 0, byPerson: {}, byCategory: {} });
+        if (last < 2) return ok({ total: 0, totalIncome: 0, byPerson: {}, byCategory: {} });
 
         var data        = sheet.getRange(2, 1, last - 1, 7).getValues();
         var total       = 0;
@@ -526,7 +537,7 @@ function doGet(e) {
           if (sub) byCat[sub] = (byCat[sub] || 0) + amt;
         });
 
-        return ok({ total: total, totalIncome: totalIncome, byPerson: byPerson, byCategory: byCat, month: month, year: year });
+        return ok({ total: total, totalIncome: totalIncome, byPerson: byPerson, byCategory: byCat, month: month, year: year, scope: scopeAll ? "all" : "" });
       }
 
       // ── Công nợ ────────────────────────────────────────────
