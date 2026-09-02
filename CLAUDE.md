@@ -12,7 +12,7 @@
   KHÔNG cần hỏi từng cái nhỏ; đổi lại **bắt buộc ghi lại "làm gì + vì sao" vào `NHAT_KY.md`** (và cập
   nhật `CLAUDE.md` nếu đổi cấu trúc/quy ước). Tài liệu md = cách Khoa giám sát và học, không phải thủ tục.
 - **Repo người khác/dự án khác trên máy:** chỉ sửa repo đang có đủ context; repo khác (lehai-tools,
-  Company_OS, fb-auto-post...) thì **kiểm tra + báo cáo**, KHÔNG tự sửa source khi chưa nắm rõ.
+  company-os, fb-auto-post...) thì **kiểm tra + báo cáo**, KHÔNG tự sửa source khi chưa nắm rõ.
 
 ## Tài liệu
 
@@ -31,7 +31,7 @@ Phạm vi đã chốt: **nhập liệu + theo dõi + công nợ**. Hoạch đị
 ## Kiến trúc
 
 ```
-app_chi_tieu/
+app-chi-tieu/
 ├── CLAUDE.md
 ├── NHAT_KY.md
 ├── deploy.ps1            ← deploy: copy pwa/* → force-push nhánh gh-pages
@@ -86,7 +86,7 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 
 - **GitHub `tankfire4-dot/app-chi-tieu` = nguồn chính của GIAO DIỆN.** `master` = source code;
   `gh-pages` = bản chạy live tại `https://tankfire4-dot.github.io/app-chi-tieu/`.
-- **`C:\Users\tankf\Desktop\agent_lab_khoa\projects\app_chi_tieu`** = bản làm việc trên máy (dời vào
+- **`C:\Users\tankf\Desktop\agent_lab_khoa\projects\app-chi-tieu`** = bản làm việc trên máy (dời vào
   lab 16/07/2026, trước đó nằm ngoài Desktop). Sửa ở đây → commit + **push `master`** (agent được,
   từ 21/07, nếu repo đã bật Branch protection) → **`gh-pages` thì KHOA tự deploy**, agent không đụng.
 - **Google Sheet + Apps Script của mỗi user = DỮ LIỆU.** KHÔNG nằm ở GitHub. Mất GitHub → giao diện
@@ -103,7 +103,7 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
    (`ExecutionPolicy` Restricted — gõ `.\deploy.ps1` trần là báo lỗi đỏ, đã vấp 26/07), và
    ghi **đường dẫn đầy đủ** chứ không phải `.\` (Khoa hay đứng ở thư mục lab, `.\` là lỗi thứ hai
    vấp cùng ngày). Script tự lấy `$PSScriptRoot` nên không cần `cd`:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\tankf\Desktop\agent_lab_khoa\projects\app_chi_tieu\deploy.ps1"`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\tankf\Desktop\agent_lab_khoa\projects\app-chi-tieu\deploy.ps1"`
    Agent không deploy, không `--force`, không xóa nhánh
    (luật CONG GITHUB 21/07, xem `agent_lab_khoa/AGENTS.md`).
 5. Người dùng đóng/mở lại app 1–2 lần để service worker nhận bản mới.
