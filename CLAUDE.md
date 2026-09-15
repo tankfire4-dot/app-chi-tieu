@@ -91,6 +91,12 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
   từ 21/07, nếu repo đã bật Branch protection) → **`gh-pages` thì KHOA tự deploy**, agent không đụng.
 - **Google Sheet + Apps Script của mỗi user = DỮ LIỆU.** KHÔNG nằm ở GitHub. Mất GitHub → giao diện
   sập (khôi phục được vì code có ở local + master + gh-pages) nhưng **dữ liệu vẫn an toàn** ở Google.
+- **NGHIỆM THU trên dữ liệu thật — RIÊNG Claude Code được ĐỌC** (Khoa chốt 15/09/2026). Claude được
+  gọi backend `/exec` **chỉ-đọc** (`getStats`, `getRows`, `getDebts`…) hoặc mở Sheet thật để **kiểm
+  chứng bản chạy**. Ràng buộc: **chỉ Claude, KHÔNG Codex**; **chỉ ĐỌC — cấm GHI/SỬA/XÓA** dữ liệu
+  thật; và **cấm nhét dữ liệu thật vào fixture test tự động** (test vẫn chạy fixture giả). Điều này
+  **thay** câu "Cấm đọc/ghi dữ liệu Sheet thật để test" ở brief cũ
+  (`handoff/task-app-chi-tieu-thong-ke.md` §9) — câu đó giờ chỉ còn áp cho **Codex** và cho việc **GHI**.
 
 ## Quy trình đổi giao diện
 
