@@ -12,6 +12,44 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-09-25 (tối) — Sổ trên máy (local-first): vẽ ngay, hỏi Google sau
+
+**Vấn đề:** v59 đã deploy, đo lại thật: Trang chủ 4–5s, Thống kê 3,5–4,5s lúc Google "ấm"; lúc nguội
+44–87s hoặc Google trả trang "Không tìm thấy trang". Khoa hỏi "vậy app sẽ mãi như vầy à?" — đúng,
+chừng nào app còn phải hỏi Google trước khi vẽ thì sàn 3s + cú giật là của Google, app không chữa được.
+
+**Quyết định (Khoa duyệt):** app giữ **bản sao toàn bộ sổ** trên máy (`localStorage` `ct_book`,
+709 dòng ≈ 140KB). Mọi màn vẽ NGAY từ bản này; `syncBook()` gọi `getRows scope=all` ở nền rồi vẽ
+lại. Số dư/thống kê/công nợ tính trên máy bằng `localBalance/localStats/localDebts/localRows` —
+bản dịch 1-1 của `balanceOf/statsOf/debtsOf/rowsOf` trong Code.gs. Google Sheet vẫn là sổ gốc, mọi
+lệnh ghi vẫn đi thẳng lên Sheet. **Không đổi backend** (dùng `getRows scope=all` có sẵn từ v58).
+
+- Đồng bộ: vừa đồng bộ < 30s thì chuyển màn không hỏi lại; sau lệnh ghi thì ép đồng bộ; lượt cũ về
+  muộn bị bỏ (số thứ tự lượt) để không đè số trước-khi-ghi lên số sau-khi-ghi; mở lại app từ nền
+  (`visibilitychange`) cũng đồng bộ.
+- Xóa / Hoàn tác / Đánh dấu đã thu sửa luôn sổ trên máy y như Sheet (xóa thì dồn số dòng lên) nên
+  thay đổi hiện liền, đồng bộ sau chép đè bằng bản thật.
+- Dòng "Cập nhật HH:MM" ở Trang chủ + Công nợ; mất mạng thì "Chưa đồng bộ được · số lúc HH:MM".
+- Bonus: khối "7 ngày qua" đọc cả sổ (trước chỉ có dòng tháng này → đầu tháng mất mấy ngày cuối
+  tháng trước).
+- Frontend thôi dùng `getHome`/`getStatsBundle` (vẫn để ở backend, test dùng làm đối chiếu). Bump `v60`.
+
+**Vì sao:** chỗ chậm là chờ Google, không phải tính toán; bỏ chờ trước khi vẽ là cách duy nhất giữ
+được Sheet mà hết lag. Sổ nhỏ (vài trăm dòng/năm) nên chép cả sổ về máy nhiều năm nữa vẫn nhẹ.
+
+**Rủi ro:** số trên máy có thể cũ hơn Sheet vài giây (vừa sửa tay trong Sheet) — có dòng "Cập nhật"
+để biết. Lần mở ĐẦU TIÊN trên máy (chưa có sổ) vẫn phải đợi Google (đo 29–73s lúc nguội). Chỗ nguy
+nhất là công thức dời xuống máy → khóa bằng test so hai bên.
+
+**Bằng chứng:** `tests/stats.test.mjs` **86/86**, trong đó mục 12 so máy vs Code.gs trên sổ mẫu +
+400 dòng ngẫu nhiên × mọi tháng/năm; mục 13 chặn lượt đồng bộ cũ đè. Thử phá 5 chỗ (số dư tính cả
+nợ đã thu, bỏ ngày bắt đầu, sai thứ tự duyệt, bỏ chặn lượt cũ, bỏ nghỉ 30s) → cả 5 đỏ.
+`tests/stats.browser.js` **30/30**. **Nghiệm thu trên backend thật, chỉ đọc** (Chromium, route chặn
+mọi lệnh ghi): 709 dòng, số dư + thống kê 4 kỳ + công nợ máy tính **khớp 100%** Google; mở lại app
+0,3–0,5s ra số (màn chào cố ý giữ 0,9s nên mắt thấy ~1,4s), Công nợ 0,04s, Thống kê 0,05s.
+
+---
+
 ## 2026-09-25 — App lag: bớt số lần gọi Apps Script + lưu nền
 
 **Vấn đề:** Khoa thấy app "dạo này lag", hỏi có nên chuyển hẳn sang Apps Script. Đo thật backend

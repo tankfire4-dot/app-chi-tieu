@@ -36,7 +36,7 @@ function eq(name, actual, expect) { return check(name + ` = ${JSON.stringify(exp
 const row = (date, cat, sub, amount, opt = {}) =>
   [date, opt.name || 'Khoa', cat, sub, opt.detail || '', amount, opt.collected === true, opt.collectedDate || ''];
 
-function makeBackend(rows) {
+function makeBackend(rows, cfg = []) {
   const sheet = {
     getLastRow: () => rows.length + 1,                     // +1 vì dòng 1 là header
     getRange: (r, c, nr, nc) => ({
@@ -46,9 +46,12 @@ function makeBackend(rows) {
   };
   // Các tab phụ (tên người, hạng mục, cấu hình) có sẵn nhưng trống → ensureSetup không phải tạo mới
   const emptyTab = { getLastRow: () => 1, getRange: () => ({ getValues: () => [], getValue: () => 'tiêu đề' }) };
+  // Tab cau_hinh: cfg = [[khóa, giá trị], ...] (số dư ban đầu, ngày bắt đầu)
+  const cfgTab = { getLastRow: () => cfg.length + 1,
+                   getRange: (r, c, nr, nc) => ({ getValues: () => cfg.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)) }) };
   const out = (t) => ({ __text: t, setMimeType: () => out(t) });
   const ctx = vm.createContext({
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : emptyTab) }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : n === 'cau_hinh' ? cfgTab : emptyTab) }) },
     ContentService: { createTextOutput: out, MimeType: { JSON: 'application/json' } },
     Utilities:      { formatDate: (d) => d },
     LockService:    { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
@@ -115,6 +118,7 @@ function makeApp(backend) {
     async loadStats(year, month) {
       document.getElementById('stats-year').value  = year;
       document.getElementById('stats-month').value = month;
+      run("S.screen = 'stats'");   // như go('stats') — đồng bộ xong mới biết vẽ lại màn nào
       try { await run('loadStats()'); } catch (e) { /* loadStats tự nuốt, giữ để test đọc màn */ }
       return this.html();
     }
@@ -157,11 +161,6 @@ const F_KY = [                                            // kỳ mẫu 08/2026 
   row('05/08/2026', 'Cho mượn/ Ứng', 'Cty',  -500000),
   row('06/08/2026', 'Cho mượn/ Ứng', 'Marketing', 2000000, { collected: true })
 ];
-// Backend BẢN CŨ (chưa dán Code.gs mới): không có lệnh gộp → trả "Unknown action" như Code.gs thật.
-const NEW_ACTIONS = ['getHome', 'getStatsBundle'];
-const legacy = (be) => (params) => NEW_ACTIONS.includes(params.action)
-  ? { success: false, error: 'Unknown action: ' + params.action } : be(params);
-
 const period = (be, month, year) => ({
   d: be({ action: 'getStats', month, year }),
   rows: be({ action: 'getRows', month, year }).rows
@@ -274,7 +273,7 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
         nay.year === String(new Date().getFullYear()), nay.year);
 }
 
-// ============ 7. NHẤT QUÁN + CACHE ============
+// ============ 7. NHẤT QUÁN + SỔ TRÊN MÁY ============
 {
   const be = makeBackend(F_KY), app = makeApp(be);
   const { d, rows } = period(be, '08', '2026');
@@ -286,48 +285,46 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
     list.forEach(c => eq(`7. ${ten}/${c.name}: ·N = số dòng detail`, c.count, c.detail.length));
   }
 
-  // đi qua loadStats thật: lần 1 mạng sống (ghi cache) → lần 2 cắt mạng (đọc cache) → phải y hệt
-  // (đường lệnh gộp getStatsBundle)
-  const appB = makeApp(be);
-  const freshB = await appB.loadStats('2026', '08');
-  appB.net.offline = true;
-  eq('7. [gộp] cached render == fresh render', (await appB.loadStats('2026', '08')) === freshB, true);
-  const bundleCalls = appB.net.calls.filter(c => c.action === 'getStatsBundle');
-  check('7. [gộp] chỉ 1 lệnh getStatsBundle mang đúng kỳ, không lệnh lẻ nào',
-        appB.net.calls.every(c => c.action === 'getStatsBundle') && bundleCalls.every(c => c.month === '08' && c.year === '2026'),
-        appB.net.calls.map(c => c.action + ':' + c.month + '/' + c.year));
-  const appBA = makeApp(be);
-  await appBA.loadStats('', '');
-  check('7. [gộp] Tất cả năm → getStatsBundle mang scope=all',
-        appBA.net.calls.length === 1 && appBA.net.calls[0].scope === 'all' && !appBA.net.calls[0].year, appBA.net.calls);
+  // Màn Thống kê vẽ từ sổ trên máy phải Y HỆT màn vẽ từ số Google tính (cùng kỳ, cùng dữ liệu)
+  const many = F_KY.concat([row('10/07/2026', 'Thu nhập', 'Lương', 8000000), row('11/07/2026', 'Cá nhân', 'Tiền ăn', 900000),
+                            row('05/02/2024', 'Cá nhân', 'Legacy', 700000)]);
+  const be2 = makeBackend(many);
+  for (const [y, m] of [['2026', '08'], ['2026', ''], ['', '']]) {
+    const a = makeApp(be2);
+    const local = await a.loadStats(y, m);
+    const all = !y;
+    const ref = a.render(be2(all ? { action: 'getStats', scope: 'all' } : { action: 'getStats', month: m, year: y }), m, y,
+                         be2({ action: 'getDebts' }).debts,
+                         m ? be2({ action: 'getStats', month: '07', year: '2026' }) : null,
+                         be2(all ? { action: 'getRows', scope: 'all' } : { action: 'getRows', month: m, year: y }).rows);
+    eq(`7. màn Thống kê ${m || '--'}/${y || 'tất cả'}: sổ trên máy == số Google`, local === ref, true);
+    eq(`7. ${m || '--'}/${y || 'tất cả'}: chỉ 1 lệnh đọc cả sổ (getRows scope=all)`,
+       a.net.calls.map(c => c.action + ':' + (c.scope || '')), ['getRows:all']);
+  }
 
-  // Các phép dưới kiểm ĐƯỜNG CŨ (backend chưa dán bản mới) — phải giữ nguyên hành vi trước.
-  const app2 = makeApp(legacy(be));
+  // Mở lại app KHÔNG có mạng: sổ đã lưu trên máy vẽ ra y hệt, không phải đợi Google
+  const app2 = makeApp(be2);
   const fresh = await app2.loadStats('2026', '08');
-  app2.net.offline = true;
-  const cached = await app2.loadStats('2026', '08');
-  eq('7. cached render == fresh render', cached === fresh, true);
-  // (getStats 07/2026 là lệnh so-tháng-trước, đúng theo thiết kế — không tính vào kỳ đang xem)
-  const kyCalls = app2.net.calls.filter(c => c.action === 'getRows' || (c.action === 'getStats' && c.month === '08'));
-  check('7. loadStats gửi đúng kỳ cho CẢ getStats và getRows',
-        kyCalls.length >= 2 && kyCalls.every(c => c.month === '08' && c.year === '2026' && !c.limit),
-        app2.net.calls.map(c => c.action + ':' + c.month + '/' + c.year));
+  const app3 = makeApp(be2);
+  app2.store.forEach((v, k) => app3.store.set(k, v));
+  app3.run('S.book = bookLoad()');
+  app3.net.offline = true;
+  eq('7. mở lại offline: vẽ từ sổ đã lưu == bản vừa tải', await app3.loadStats('2026', '08'), fresh);
+  eq('7. vừa đồng bộ < 30s: chuyển màn KHÔNG hỏi lại Google', app3.net.calls.length, 0);
 
-  // "Tất cả năm" phải xin cờ scope=all cho CẢ HAI lệnh, không dùng year='' để ngầm đoán
-  const app3 = makeApp(legacy(be));
-  await app3.loadStats('', '');
-  const scoped = app3.net.calls.filter(c => ['getStats', 'getRows'].includes(c.action));
-  check('7. Tất cả năm → cả getStats lẫn getRows đều mang scope=all',
-        scoped.length >= 2 && scoped.every(c => c.scope === 'all' && !c.limit), scoped);
+  // Sổ lưu từ lâu + mất mạng → vẫn vẽ số cũ, và dòng "cập nhật" nói thật là chưa đồng bộ được
+  app3.run('S.book.at = Date.now() - 3600e3');
+  const stale = await app3.loadStats('2026', '08');
+  eq('7. sổ cũ + mất mạng: vẫn vẽ đủ màn', stale, fresh);
+  check('7. sổ cũ + mất mạng: báo "Chưa đồng bộ được"', app3.els.get('debt-updated').textContent.includes('Chưa đồng bộ'),
+        app3.els.get('debt-updated').textContent);
 
-  // thiếu một vế trong cache (rows rớt vì hết quota) → KHÔNG được vẽ nửa đúng nửa thiếu
-  const app4 = makeApp(legacy(be));
-  await app4.loadStats('2026', '08');
-  [...app4.store.keys()].filter(k => k.includes('getRows')).forEach(k => app4.store.delete(k));
+  // Chưa từng có sổ + mất mạng → báo lỗi, KHÔNG vẽ thẻ tổng trơ trọi
+  const app4 = makeApp(be2);
   app4.net.offline = true;
-  const half = await app4.loadStats('2026', '08');
-  check('7. mất rows → báo lỗi, KHÔNG vẽ thẻ tổng trơ trọi',
-        half.includes('Không tải được thống kê') && !half.includes('Chi tiêu cá nhân'), half.slice(0, 120));
+  const none = await app4.loadStats('2026', '08');
+  check('7. chưa có sổ + mất mạng → báo lỗi, không vẽ nửa vời',
+        none.includes('Không tải được thống kê') && !none.includes('Chi tiêu cá nhân'), none.slice(0, 120));
 }
 
 // ============ 8. KHÔNG HỒI QUY: CÔNG NỢ + TIẾT KIỆM ============
@@ -380,25 +377,35 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
   eq('9. bundle scope=all không có tháng trước', a.prev, null);
 }
 
-// ============ 10. TRANG CHỦ: 1 LỆNH, BACKEND CŨ THÌ LÙI VỀ ĐƯỜNG CŨ ============
+// ============ 10. TRANG CHỦ VẼ TỪ SỔ TRÊN MÁY ============
 {
   const now = new Date(), mm = String(now.getMonth() + 1).padStart(2, '0'), yy = String(now.getFullYear());
   const today = String(now.getDate()).padStart(2, '0') + '/' + mm + '/' + yy;
-  const be = makeBackend([row(today, 'Cá nhân', 'Tiền ăn', 45000, { detail: 'phở' })]);
+  const cfg = [['so_du_ban_dau', 2000000], ['tu_ngay', '01/01/2020']];
+  const be = makeBackend([row('01/01/2019', 'Cá nhân', 'Cũ', 999999),   // trước ngày bắt đầu → không tính
+                          row(today, 'Thu nhập', 'Lương', 5000000),
+                          row(today, 'Cá nhân', 'Tiền ăn', 45000, { detail: 'phở' }),
+                          row(today, 'Cho mượn/ Ứng', 'Cty', 300000, { name: 'A. Hải' })], cfg);
 
   const app = makeApp(be);
-  app.run('initMonthTabs()'); await app.run('loadHome()');
-  eq('10. mới: trang chủ chỉ 1 lệnh getHome', app.net.calls.map(c => c.action), ['getHome']);
-  check('10. mới: danh sách có khoản phở', app.els.get('tx-list').innerHTML.includes('phở'));
+  app.run('initMonthTabs(); S.screen = "home"; applyConfig(__in)', be({ action: 'getConfig' }));
+  await app.run('loadHome()');
+  eq('10. trang chủ: 1 lệnh đọc cả sổ', app.net.calls.map(c => c.action + ':' + (c.scope || '')), ['getRows:all']);
+  check('10. danh sách có khoản phở', app.els.get('tx-list').innerHTML.includes('phở'));
+  const bal = be({ action: 'getBalance' }).balance;
+  eq('10. số dư tính trên máy == getBalance của Google', app.els.get('card-total').textContent, (bal < 0 ? '-' : '') + app.run('fmt(__in)', bal));
+  check('10. có dòng "Cập nhật HH:MM"', /Cập nhật \d{2}:\d{2}/.test(app.els.get('home-updated').textContent), app.els.get('home-updated').textContent);
 
-  const old = makeApp(legacy(be));
-  old.run('initMonthTabs()'); await old.run('loadHome()');
-  eq('10. cũ: getHome hỏng 1 lần (không thử lại) rồi getRows + getBalance',
-     old.net.calls.map(c => c.action).sort(), ['getBalance', 'getHome', 'getRows']);
-  check('10. cũ: vẫn hiện khoản phở', old.els.get('tx-list').innerHTML.includes('phở'));
-  old.net.calls.length = 0; await old.run('loadHome()'); await old.loadStats('2026', '08');
-  check('10. cũ: đã nhớ backend cũ → lần sau KHÔNG gọi lệnh gộp nữa',
-        !old.net.calls.some(c => NEW_ACTIONS.includes(c.action)), old.net.calls.map(c => c.action));
+  app.net.calls.length = 0;
+  await app.run('loadHome()'); await app.run('loadDebts()');
+  eq('10. qua lại màn trong 30s: không hỏi Google thêm lần nào', app.net.calls.length, 0);
+
+  // Xóa trên máy phải y như Sheet: dòng bị xóa biến mất, các dòng dưới lùi số dòng
+  const idx = app.run('S.book.rows.map(r => r.rowIndex)');
+  app.run('bookDeleteRows(3, 1)');
+  eq('10. bookDeleteRows(3,1): còn 3 dòng, số dòng dồn lên như Sheet',
+     app.run('S.book.rows.map(r => r.rowIndex + ":" + r.subcategory)'), ['4:Cty', '3:Tiền ăn', '2:Cũ']);
+  eq('10. [đối chứng] trước khi xóa có 4 dòng 5..2', idx, [5, 4, 3, 2]);
 }
 
 // ============ 11. LƯU NỀN: FORM ĐÓNG NGAY, LỖI THÌ BÁO RÕ, KHÔNG GHI TRÙNG ============
@@ -447,6 +454,79 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
   check('11. lỗi: báo rõ khoản nào chưa lưu', toast.includes('trà đá') && toast.includes('30.000') && toast.includes('Mất mạng'), toast);
   await new Promise(r => setTimeout(r, 0));
   check('11. lỗi: dòng "Đang lưu" biến mất, không để khoản ma', !list().includes('trà đá'), list().slice(0, 200));
+}
+
+// ============ 12. TÍNH TRÊN MÁY == GOOGLE TÍNH (lệch 1 đồng là đỏ) ============
+{
+  const strip = (o) => { const x = Object.assign({}, o); ['success', 'month', 'year', 'scope'].forEach(k => delete x[k]); return x; };
+  const soSanh = (ten, data, cfg) => {
+    const be = makeBackend(data, cfg), app = makeApp(be);
+    const book = be({ action: 'getRows', scope: 'all' }).rows;
+    const conf = be({ action: 'getConfig' });
+    let lech = 0; const lan = [];
+    const ky = [['', '']];
+    new Set(data.map(r => r[0].slice(6, 10))).forEach(y => { ky.push(['', y]); for (let m = 1; m <= 12; m++) ky.push([String(m).padStart(2, '0'), y]); });
+    for (const [m, y] of ky) {
+      const scope = !y ? { scope: 'all' } : { month: m, year: y };
+      const b = be(Object.assign({ action: 'getStatsBundle' }, scope));
+      const L = (code) => app.run(code, { rows: book, m, y });
+      if (JSON.stringify(L('localStats(__in.rows, __in.m, __in.y)')) !== JSON.stringify(strip(b.stats))) { lech++; lan.push('stats ' + m + '/' + y); }
+      if (JSON.stringify(L('localRows(__in.rows, __in.m, __in.y)')) !== JSON.stringify(b.rows)) { lech++; lan.push('rows ' + m + '/' + y); }
+    }
+    eq(`12. ${ten}: thống kê + dòng mọi kỳ (${ky.length} kỳ) khớp Google`, lan, []);
+    eq(`12. ${ten}: công nợ khớp getDebts`, app.run('localDebts(__in)', book), strip(be({ action: 'getDebts' })));
+    eq(`12. ${ten}: số dư khớp getBalance`,
+       app.run('localBalance(__in.rows, {startBalance: Number(__in.c.startBalance)||0, startDate: String(__in.c.startDate||"")})', { rows: book, c: conf }),
+       strip(be({ action: 'getBalance' })));
+  };
+
+  soSanh('sổ mẫu', F_KY.concat([
+    row('10/07/2026', 'Thu nhập', 'Lương', 8000000),
+    row('12/12/2025', 'Cá nhân', 'Nhà', 3000000),
+    row('03/01/2026', 'Cho mượn/ Ứng', 'Cty', 400000, { name: 'A. Hải', collected: true, collectedDate: '05/01/2026' }),
+    row('04/01/2026', 'Cho mượn/ Ứng', '', -250000, { name: 'C. Kỳ' })
+  ]), [['so_du_ban_dau', 1500000], ['tu_ngay', '01/01/2026']]);
+
+  // Sổ ngẫu nhiên (hạt giống cố định → lần nào chạy cũng cùng dữ liệu): nhiều người, số âm, đã thu/chưa,
+  // ngày thu trùng nhau, hạng mục rỗng — những chỗ dễ lệch thứ tự/dấu nhất.
+  let seed = 20260925; const rnd = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  const NGUOI = ['Khoa', 'A. Hải', 'C. Kỳ', 'Quan', 'Phi'], LOAI = ['Cá nhân', 'Cho mượn/ Ứng', 'Thu nhập'], HM = ['Tiền ăn', 'Nhà', 'Cty', '', 'Lương'];
+  const rand = [];
+  for (let i = 0; i < 400; i++) {
+    const d = String(1 + rnd(28)).padStart(2, '0') + '/' + String(1 + rnd(12)).padStart(2, '0') + '/' + (2024 + rnd(3));
+    const loai = LOAI[rnd(3)], thu = rnd(2) === 1;
+    rand.push(row(d, loai, HM[rnd(5)], (rnd(5) === 0 ? -1 : 1) * 1000 * (1 + rnd(900)),
+                  { name: NGUOI[rnd(5)], detail: 'k' + i, collected: thu, collectedDate: thu && rnd(3) ? '0' + (1 + rnd(9)) + '/0' + (1 + rnd(9)) + '/2026' : '' }));
+  }
+  soSanh('400 dòng ngẫu nhiên', rand, [['so_du_ban_dau', 777000], ['tu_ngay', '15/06/2025']]);
+  soSanh('không cấu hình số dư', rand.slice(0, 50));
+}
+
+// ============ 13. ĐỒNG BỘ CŨ VỀ MUỘN KHÔNG ĐƯỢC ĐÈ BẢN MỚI ============
+// Mở màn → lượt đồng bộ A chạy (chậm, mang sổ TRƯỚC khi ghi). Ghi xong → lượt B ép buộc, về nhanh với
+// sổ SAU khi ghi. A về muộn nhất → nếu không chặn, khoản vừa ghi biến mất khỏi màn.
+{
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+  const cu  = makeBackend([row(today, 'Cá nhân', 'Tiền ăn', 10000, { detail: 'cũ' })]);
+  const moi = makeBackend([row(today, 'Cá nhân', 'Tiền ăn', 10000, { detail: 'cũ' }), row(today, 'Cá nhân', 'Tiền ăn', 20000, { detail: 'mới ghi' })]);
+  const app = makeApp(cu);
+  let thaA;
+  let lan = 0;
+  app.ctx.fetch = async (u) => {
+    const url = new URL(u); const params = {}; url.searchParams.forEach((v, k) => (params[k] = v));
+    lan++;
+    const json = lan === 1 ? await new Promise(r => { thaA = () => r(cu(params)); }) : moi(params);
+    return { ok: true, status: 200, json: async () => json };
+  };
+  app.run('initMonthTabs(); S.screen = "home"');
+  const A = app.run('syncBook()');
+  await new Promise(r => setTimeout(r, 0));
+  await app.run('syncBook(true)');
+  thaA(); await A;
+  check('13. lượt cũ về muộn KHÔNG đè: sổ vẫn có khoản "mới ghi"',
+        app.run('S.book.rows.some(r => r.detail === "mới ghi")') && app.els.get('tx-list').innerHTML.includes('mới ghi'),
+        app.run('S.book.rows.map(r => r.detail)'));
 }
 
 // ============ KẾT ============

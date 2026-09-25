@@ -266,7 +266,10 @@
 
   <!-- Transaction list -->
   <div class="px-4">
-    <p class="text-white font-bold text-base mb-4">Giao dịch gần đây</p>
+    <div class="mb-4" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      <p class="text-white font-bold text-base">Giao dịch gần đây</p>
+      <p id="home-updated" class="text-gray-500 text-xs"></p>
+    </div>
     <div id="tx-list">
       <!-- Skeleton -->
       <div class="space-y-2 mb-4">
@@ -559,10 +562,10 @@ let HM_THU      = ['💵 Lương','🎁 Thưởng','📦 Thu nhập khác'].map(
 const AVATAR_COLORS = ['bg-indigo-900 text-indigo-300','bg-purple-900 text-purple-300','bg-pink-900 text-pink-300','bg-orange-900 text-orange-300','bg-teal-900 text-teal-300','bg-amber-900 text-amber-300','bg-rose-900 text-rose-300','bg-emerald-900 text-emerald-300','bg-blue-900 text-blue-300','bg-cyan-900 text-cyan-300'];
 
 // ============ STATE ============
-let S = { url:'', pending:[], legacyApi:false, prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, lastRowVerify:null, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
+let S = { url:'', pending:[], book:null, cfg:null, screen:'home', syncErr:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, lastRowVerify:null, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
 
 // ============ CACHE ============
-const CACHE_TTL = { getRows: 60, getDebts: 120, getStats: 300, getConfig: 86400, getHome: 60, getStatsBundle: 300 };
+const CACHE_TTL = { getConfig: 86400 };   // dữ liệu giao dịch không qua cache này nữa — xem SỔ TRÊN MÁY
 function cacheKey(params) { return 'ct_' + JSON.stringify(params); }
 function cacheGet(params) {
   const k = cacheKey(params); const raw = localStorage.getItem(k);
@@ -646,6 +649,7 @@ function doLogout(btn) {
 }
 
 async function enterApp() {
+  S.book = bookLoad();   // có sổ từ lần trước → mọi màn vẽ ngay, không đợi Google
   hideSplash();
   document.getElementById('s-setup').classList.add('hidden');
   document.getElementById('s-setup').classList.remove('active');
@@ -666,6 +670,7 @@ async function enterApp() {
 
 function applyConfig(cfg) {
   OWNER = cfg.owner || OWNER;
+  if (cfg.startBalance !== undefined) S.cfg = { startBalance: Number(cfg.startBalance) || 0, startDate: String(cfg.startDate || '') };
   if(cfg.people && cfg.people.length) PEOPLE = cfg.people.map(p=>p.name);
   if(cfg.categories && cfg.categories.length) {
     // Backend trả từ khóa ở trường `keys` (mảng) — KHÔNG phải `keywords`. Đọc đúng `keys`, chuẩn hóa
@@ -684,10 +689,12 @@ function applyConfig(cfg) {
 document.getElementById('split-note').textContent = OWNER+' bắt buộc · bấm chọn thêm người';
   initPeopleChips();
   initHangMuc();
+  if (S.book) redrawCurrent();   // OWNER/số dư ban đầu vừa về → vẽ lại số dư, thống kê
 }
 
 // ============ NAV ============
 function go(name) {
+  S.screen = name;
   ['home','add','debts','stats'].forEach(s => {
     const el = document.getElementById('s-'+s);
     el.classList.toggle('hidden', s!==name);
@@ -711,41 +718,136 @@ function initMonthTabs() {
   S.curMonth = now.getMonth()+1; S.curYear = now.getFullYear();
 }
 
-// ============ LOAD HOME ============
-// Backend chưa dán bản có lệnh gộp → nhớ trong phiên, khỏi tốn thêm 1 lệnh hỏng (~3s) mỗi lần tải.
-const isUnknownAction = e => /^Unknown action/i.test((e && e.message) || '');
+// ============ SỔ TRÊN MÁY (local-first, Khoa duyệt 25/09) ============
+// Mỗi lệnh Apps Script ~3s sàn; lúc nguội 40–80s hoặc trả trang 404 (đo thật 25/09). Nên app giữ
+// BẢN SAO TOÀN BỘ SỔ trên máy (~700 dòng ≈ 150KB): màn nào cũng vẽ NGAY từ bản này, rồi hỏi Google
+// ở nền, có gì mới thì vẽ lại. Google Sheet vẫn là SỔ GỐC — bản trên máy chỉ để đọc nhanh; mọi lệnh
+// ghi vẫn đi thẳng lên Sheet rồi đồng bộ về.
+// Các hàm tính dưới đây là bản dịch 1-1 của rowsOf/statsOf/debtsOf/balanceOf trong Code.gs.
+// tests/stats.test.mjs chạy CẢ HAI trên cùng dữ liệu và bắt phải bằng nhau — sửa một bên mà quên
+// bên kia là test đỏ.
+const BOOK_KEY = 'ct_book';   // tiền tố ct_ → nút Đăng xuất xóa luôn
+const SYNC_FRESH_MS = 30000;  // vừa đồng bộ < 30s thì chuyển màn không hỏi lại Google
+function bookLoad() {
+  try { const b = JSON.parse(localStorage.getItem(BOOK_KEY) || 'null'); if (b && Array.isArray(b.rows)) return b; } catch(e) {}
+  return null;
+}
+function bookSave(b) { try { localStorage.setItem(BOOK_KEY, JSON.stringify(b)); } catch(e) {} }   // hết chỗ → vẫn dùng bản trong RAM
 
-async function loadHome() {
-  const month = String(S.curMonth).padStart(2,'0'), year = String(S.curYear);
-  if (S.legacyApi) return loadHomeLegacy(month, year);
-  // 1 lệnh getHome (dòng tháng + số dư, backend đọc Sheet 1 lần) thay 2 lệnh nối đuôi. Mỗi lệnh Apps
-  // Script tốn ~3s sàn dù Sheet nhỏ (đo thật 25/09) → trang chủ bớt nửa thời gian chờ.
-  const p = {action:'getHome', month, year};
-  const cached = cacheGet(p);
-  if (cached) { S.rows = cached.rows || []; renderRows(); renderBalance(cached.balance || {}); }
-  try {
-    const d = await api(p);
-    S.rows = d.rows || []; renderRows(); renderBalance(d.balance || {});
-  } catch(e) {
-    if (isUnknownAction(e)) { S.legacyApi = true; return loadHomeLegacy(month, year); }
-    if (!cached) { showToast('Lỗi tải dữ liệu: '+e.message,'err'); document.getElementById('card-total').textContent = '—'; }
-  }
+let _syncSeq = 0, _syncing = null;
+// force = vừa ghi xong, phải lấy bản mới dù đang có lượt đồng bộ chạy (lượt cũ có thể mang số trước khi ghi).
+function syncBook(force) {
+  if (!force && _syncing) return _syncing;
+  if (!force && S.book && Date.now() - S.book.at < SYNC_FRESH_MS) return Promise.resolve(S.book);
+  const seq = ++_syncSeq;
+  const p = api({action:'getRows', scope:'all'}).then(d => {
+    if (d.scope !== 'all') throw new Error('Backend chưa hỗ trợ đọc toàn bộ sổ — cập nhật Code.gs');
+    if (seq !== _syncSeq) return S.book;   // đã có lượt mới hơn → bỏ kết quả cũ
+    S.book = { rows: d.rows || [], at: Date.now() };
+    S.syncErr = '';
+    bookSave(S.book);
+    redrawCurrent();
+    return S.book;
+  }, e => {
+    if (seq === _syncSeq) { S.syncErr = e.message || 'lỗi'; setFresh(); }
+    throw e;
+  }).finally(() => { if (_syncing === p) { _syncing = null; setFresh(); } });
+  _syncing = p;
+  setFresh();
+  return p;
 }
 
-// Đường cũ cho backend chưa cập nhật — 2 lệnh chạy SONG SONG (trước đây nối đuôi, chờ gấp đôi).
-async function loadHomeLegacy(month, year) {
-  const rowParams = {action:'getRows', month, year};
-  const balParams = {action:'getBalance'};
-  const cachedRows = cacheGet(rowParams);
-  if (cachedRows) { S.rows = cachedRows.rows || []; renderRows(); }
-  const cachedBal = cacheGet(balParams);
-  if (cachedBal) renderBalance(cachedBal);
-  await Promise.all([
-    api(rowParams).then(d => { S.rows = d.rows || []; renderRows(); })
-      .catch(e => { if(!cachedRows) showToast('Lỗi tải dữ liệu: '+e.message,'err'); }),
-    api(balParams).then(renderBalance)
-      .catch(() => { if(!cachedBal) document.getElementById('card-total').textContent = '—'; })
-  ]);
+function redrawCurrent() {
+  if (!S.book) return;
+  if (S.screen === 'home')  drawHome();
+  if (S.screen === 'debts') drawDebts();
+  if (S.screen === 'stats') drawStats();
+  setFresh();
+}
+
+// Dòng nhỏ cho biết số đang tươi tới đâu (Khoa cần biết khi vừa sửa tay trong Sheet)
+function setFresh() {
+  let txt = 'Đang tải…';
+  if (S.book) {
+    const t = new Date(S.book.at).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+    txt = S.syncErr ? 'Chưa đồng bộ được · số lúc ' + t : 'Cập nhật ' + t + (_syncing ? ' · đang đồng bộ…' : '');
+  }
+  ['home-updated', 'debt-updated'].forEach(id => { document.getElementById(id).textContent = txt; });
+}
+
+// ---- Tính trên máy (dịch 1-1 từ Code.gs) ----
+// Sổ trên máy xếp MỚI NHẤT trước (như getRows); Code.gs duyệt theo thứ tự Sheet (cũ nhất trước).
+// Duyệt ngược lại cho khớp để thứ tự người/khoản nợ ra y hệt.
+const bookAsc = rows => rows.slice().reverse();
+const inPeriod = (r, month, year) => !((month && r.date.slice(3,5) !== month) || (year && r.date.slice(6,10) !== year));
+const bookDateKey = d => d.length >= 10 ? d.slice(6,10) + d.slice(3,5) + d.slice(0,2) : '';
+
+function localRows(rows, month, year) { return rows.filter(r => inPeriod(r, month, year)); }
+
+function localStats(rows, month, year) {
+  let total = 0, totalIncome = 0; const byPerson = {}, byCategory = {};
+  bookAsc(rows).forEach(r => {
+    if (!inPeriod(r, month, year)) return;
+    if (r.category === 'Thu nhập') { totalIncome += r.amount; return; }
+    total += r.amount;
+    byPerson[r.name] = (byPerson[r.name] || 0) + r.amount;
+    if (r.subcategory) byCategory[r.subcategory] = (byCategory[r.subcategory] || 0) + r.amount;
+  });
+  return { total, totalIncome, byPerson, byCategory };
+}
+
+function localDebts(rows) {
+  const debtMap = {}, collected = [];
+  bookAsc(rows).forEach(r => {
+    if (r.category !== 'Cho mượn/ Ứng') return;
+    if (r.collected) {
+      if (r.collectedDate) collected.push({ rowIndex:r.rowIndex, name:r.name, detail:r.detail, amount:r.amount, date:r.date, collectedDate:r.collectedDate });
+      return;
+    }
+    if (!debtMap[r.name]) debtMap[r.name] = { balance: 0, rows: [] };
+    debtMap[r.name].balance += r.amount;
+    debtMap[r.name].rows.push({ rowIndex:r.rowIndex, date:r.date, detail:r.detail, amount:r.amount });
+  });
+  const debts = Object.keys(debtMap).map(name => ({ name, balance: debtMap[name].balance, rows: debtMap[name].rows }))
+    .sort((a, b) => b.balance - a.balance);
+  collected.sort((a, b) => bookDateKey(b.collectedDate) < bookDateKey(a.collectedDate) ? -1 : 1);
+  return { debts, recentCollected: collected.slice(0, 20) };
+}
+
+function localBalance(rows, cfg) {
+  const startKey = bookDateKey(cfg.startDate);
+  let income = 0, spent = 0, pending = 0;
+  rows.forEach(r => {
+    if (startKey && bookDateKey(r.date) < startKey) return;
+    if (r.category === 'Thu nhập')     income += r.amount;
+    else if (r.category === 'Cá nhân') spent  += r.amount;
+    else if (r.category === 'Cho mượn/ Ứng' && !r.collected) pending += r.amount;
+  });
+  return { balance: cfg.startBalance + income - spent - pending, income, spent, pending,
+           startBalance: cfg.startBalance, startDate: cfg.startDate };
+}
+
+// Sau lệnh xóa: sửa luôn sổ trên máy y như Sheet (deleteRows đẩy các dòng dưới lên) để dòng biến mất
+// ngay, không đợi 3s đồng bộ. Đồng bộ sau đó vẫn chép đè bằng bản thật.
+function bookDeleteRows(rowIndex, count) {
+  if (!S.book) return;
+  S.book.rows = S.book.rows.filter(r => r.rowIndex < rowIndex || r.rowIndex >= rowIndex + count)
+    .map(r => r.rowIndex >= rowIndex + count ? Object.assign({}, r, { rowIndex: r.rowIndex - count }) : r);
+}
+
+// ============ LOAD HOME ============
+function drawHome() {
+  const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
+  S.rows = localRows(S.book.rows, m, y); renderRows();
+  if (S.cfg) renderBalance(localBalance(S.book.rows, S.cfg));
+}
+
+function loadHome() {
+  if (S.book) drawHome();
+  setFresh();
+  return syncBook().catch(e => {
+    if (!S.book) { showToast('Lỗi tải dữ liệu: '+e.message,'err'); document.getElementById('card-total').textContent = '—'; }
+  });
 }
 
 function renderBalance(b) {
@@ -863,16 +965,15 @@ function renderRows() {
 }
 
 // ============ LOAD DEBTS ============
-async function loadDebts() {
-  const p = {action:'getDebts'};
-  const cached = cacheGet(p);
-  if (cached) { S.debts = cached.debts || []; S.recentCollected = cached.recentCollected || []; renderDebts(); document.getElementById('debt-updated').textContent = 'Từ cache · đang cập nhật...'; }
-  else document.getElementById('debt-updated').textContent = 'Đang tải...';
-  try {
-    const d = await api(p);
-    S.debts = d.debts || []; S.recentCollected = d.recentCollected || []; renderDebts();
-    document.getElementById('debt-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
-  } catch(e) { if(!cached) showToast('Lỗi tải công nợ','err'); }
+function drawDebts() {
+  const d = localDebts(S.book.rows);
+  S.debts = d.debts; S.recentCollected = d.recentCollected; renderDebts();
+}
+
+function loadDebts() {
+  if (S.book) drawDebts();
+  setFresh();
+  return syncBook().catch(() => { if (!S.book) showToast('Lỗi tải công nợ','err'); });
 }
 
 function renderDebts() {
@@ -984,74 +1085,37 @@ function initStatsSelectors() {
   ySel.appendChild(allY);
 }
 
-async function loadStats() {
+const STATS_SKEL = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
+
+function loadStats() {
   const year  = document.getElementById('stats-year').value;
   const mSel  = document.getElementById('stats-month');
   if (!year) { mSel.value = ''; mSel.style.opacity='0.4'; mSel.style.pointerEvents='none'; }
   else        { mSel.style.opacity=''; mSel.style.pointerEvents=''; }
-  const month = mSel.value;
-  // HỢP ĐỒNG PHẠM VI THỜI GIAN — "Tất cả năm" phải nói RÕ bằng cờ scope=all.
-  // KHÔNG dùng year='' để backend tự đoán: backend đoán ra năm hiện tại, nên thẻ tổng chỉ cộng năm
-  // nay trong khi khối hạng mục lấy nhiều năm → tử số và mẫu số của phép chia % là hai kỳ khác nhau.
-  // getStats và getRows LUÔN xin cùng một phạm vi, không bao giờ lệch.
-  const allYears = !year;
-  if (!S.legacyApi && await loadStatsBundle(allYears, month, year)) return;
-  const p  = allYears ? {action:'getStats', scope:'all'} : {action:'getStats', month, year};
-  const pd = {action:'getDebts'};
-  // Lấy các dòng đúng kỳ để tách Cá nhân/Cho mượn theo phân loại thật (xem renderStats).
-  const pr = allYears ? {action:'getRows', scope:'all'} : {action:'getRows', month, year};
-  // Tháng trước để so sánh (chỉ khi chọn 1 tháng cụ thể)
-  let pPrev = null;
+  if (S.book) drawStats();
+  else document.getElementById('stats-content').innerHTML = STATS_SKEL;
+  return syncBook().catch(() => {
+    if (S.book) return;
+    showToast('Lỗi tải thống kê','err');
+    document.getElementById('stats-content').innerHTML =
+      '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
+  });
+}
+
+// HỢP ĐỒNG PHẠM VI: "Tất cả năm" (year rỗng) = toàn bộ sổ, KHÔNG đoán năm nay. Tổng, hạng mục và %
+// luôn tính trên CÙNG một tập dòng nên không thể lệch kỳ (bài học 30/08).
+function drawStats() {
+  const year  = document.getElementById('stats-year').value;
+  const month = year ? document.getElementById('stats-month').value : '';
+  const rows  = S.book.rows;
+  const d = localStats(rows, month, year);
+  let prev = null;
   if (month && year) {
     let pm = parseInt(month)-1, py = parseInt(year);
     if (pm===0) { pm=12; py--; }
-    pPrev = {action:'getStats', month:String(pm).padStart(2,'0'), year:String(py)};
+    prev = localStats(rows, String(pm).padStart(2,'0'), String(py));
   }
-  const cached  = cacheGet(p);
-  const cachedD = cacheGet(pd);
-  const cachedR = cacheGet(pr);
-  const debts0  = cachedD ? cachedD.debts : S.debts;
-  // Chỉ vẽ từ cache khi CÓ ĐỦ CẶP (tổng + rows). Thiếu một vế mà vẫn vẽ thì ra màn "thẻ tổng có số,
-  // hai khối hạng mục trống trơn" — nhìn như kỳ đó không tiêu gì. Thiếu một vế là chuyện có thật:
-  // cacheSet nuốt lỗi hết quota localStorage im lặng, mà bộ all-years thì to.
-  const cachedPair = !!(cached && cachedR);
-  if (cachedPair) renderStats(cached, month, year, debts0, pPrev?cacheGet(pPrev):null, cachedR.rows || []);
-  else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
-  try {
-    const [d, dd, dprev, dr] = await Promise.all([
-      api(p),
-      api(pd).catch(()=>({debts:debts0})),
-      pPrev ? api(pPrev).catch(()=>null) : Promise.resolve(null),
-      api(pr)   // KHÔNG nuốt lỗi: mất rows là mất nửa màn, thà báo lỗi còn hơn vẽ nửa đúng nửa thiếu
-    ]);
-    renderStats(d, month, year, dd.debts || [], dprev, dr.rows || []);
-  } catch(e) {
-    showToast('Lỗi tải thống kê','err');
-    if (!cachedPair) document.getElementById('stats-content').innerHTML =
-      '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
-  }
-}
-
-// 1 lệnh getStatsBundle (tổng kỳ + tháng trước + dòng kỳ + công nợ, backend đọc Sheet 1 lần) thay 4
-// lệnh lẻ. Cùng hợp đồng phạm vi scope=all. Một gói = một mục cache, nên không còn cảnh cache nửa vời.
-// Trả false khi backend chưa có lệnh này → loadStats đi tiếp đường cũ.
-async function loadStatsBundle(allYears, month, year) {
-  const p = allYears ? {action:'getStatsBundle', scope:'all'} : {action:'getStatsBundle', month, year};
-  const draw = b => renderStats(b.stats || {}, month, year, (b.debts && b.debts.debts) || [], b.prev || null, b.rows || []);
-  const cached = cacheGet(p);
-  if (cached) draw(cached);
-  else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
-  try {
-    const b = await api(p);
-    draw(b);
-    if (b.debts) cacheSet({action:'getDebts'}, b.debts);   // màn Công nợ mở sau đó hiện liền
-  } catch(e) {
-    if (isUnknownAction(e)) { S.legacyApi = true; return false; }
-    showToast('Lỗi tải thống kê','err');
-    if (!cached) document.getElementById('stats-content').innerHTML =
-      '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
-  }
-  return true;
+  renderStats(d, month, year, localDebts(rows).debts, prev, localRows(rows, month, year));
 }
 
 function renderStats(d, month, year, debts, prev, statRows) {
@@ -1175,7 +1239,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       days.push({ key: dd + '/' + mm + '/' + dt.getFullYear(), label: dd, sum: 0 });
     }
     const dayMap = {}; days.forEach(d => dayMap[d.key] = d);
-    (S.rows || []).forEach(r => {
+    ((S.book && S.book.rows) || S.rows || []).forEach(r => {
       if (r.name === OWNER && r.amount > 0 && r.category === 'Cá nhân' && dayMap[r.date]) dayMap[r.date].sum += r.amount;
     });
     if (days.some(d => d.sum > 0)) {
@@ -1515,10 +1579,9 @@ function saveInBackground(preview, work, okMsg) {
     showToast(okMsg,'ok');
   }).catch(e => {
     showToast('Lỗi khi lưu "'+fmtDetail(preview.detail)+'" '+fmt(preview.amount)+'đ: '+e.message+' — xem danh sách, chưa có thì ghi lại','err',7000);
-  }).then(() => {
+  }).then(() => syncBook(true).catch(() => {})).then(() => {
     S.pending = S.pending.filter(x => x !== tmp);
-    renderRows();
-    loadHome();
+    redrawCurrent();
   });
 }
 
@@ -1619,9 +1682,10 @@ async function doUndo() {
     const params = { action:'deleteRow', rowIndex:S.lastRowIndex, count:S.lastRowCount };
     if(S.lastRowVerify) { params.verifyName = S.lastRowVerify.name; params.verifyAmount = S.lastRowVerify.amount; }
     await api(params);
+    bookDeleteRows(S.lastRowIndex, S.lastRowCount);
     S.lastRowTime=0; S.lastRowIndex=0; S.lastRowVerify=null;
     showToast('Đã xóa dòng vừa ghi ✓','ok');
-    loadHome();
+    redrawCurrent(); syncBook(true).catch(()=>{});
   } catch(e) { showToast('Undo thất bại: '+e.message,'err'); }
 }
 
@@ -1726,7 +1790,7 @@ async function saveEdit() {
     await api(params);
     closeBs('bs-edit');
     showToast('Đã lưu thay đổi ✓','ok');
-    loadHome();
+    syncBook(true).catch(()=>{});
   } catch(e) { showToast('Lỗi: '+e.message,'err'); }
   setLoading(btn, false);
 }
@@ -1746,7 +1810,9 @@ async function doSetBalance() {
     document.getElementById('set-baldate').value='';
     closeBs('bs-set');
     showToast('Đã lưu số dư ban đầu ✓','ok');
-    loadHome();
+    S.cfg = { startBalance: bal, startDate: date || todayVN() };   // backend lưu y hệt (setBalance)
+    redrawCurrent();
+    api({action:'getConfig'}).then(applyConfig).catch(()=>{});     // làm mới cache cấu hình 1 ngày
   } catch(e) { showToast(e.message,'err'); }
 }
 
@@ -1812,7 +1878,8 @@ async function deleteTx(rowIndex, btn) {
     await api(params);
     closeBs('bs-tx');
     showToast('Đã xóa giao dịch ✓','ok');
-    loadHome();
+    bookDeleteRows(rowIndex, 1);
+    redrawCurrent(); syncBook(true).catch(()=>{});
   } catch(e) { showToast('Lỗi: '+e.message,'err'); btn.disabled = false; }
 }
 
@@ -1857,7 +1924,10 @@ async function markCollected(rowIndexes, verify) {
     if (verify) { params.verifyName = verify.name; params.verifyAmounts = verify.amounts.join(','); }
     await api(params);
     showToast('Đã đánh dấu thu xong ✓','ok');
-    loadDebts();
+    // Sửa sổ trên máy y như markCollected ở Code.gs (tick Đã thu + ghi ngày) → nợ biến mất ngay
+    if (S.book) { const now = todayVN(), set = new Set(rowIndexes);
+      S.book.rows = S.book.rows.map(r => set.has(r.rowIndex) ? Object.assign({}, r, { collected:true, collectedDate:now }) : r); }
+    redrawCurrent(); syncBook(true).catch(()=>{});
   } catch(e) { showToast('Lỗi: '+e.message,'err'); }
 }
 
@@ -1915,6 +1985,11 @@ function hideSplash() {
 }
 
 // ============ INIT ============
+// Mở lại app từ nền (không tải lại trang) → hỏi Google xem có gì mới
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.url && S.book) syncBook().catch(()=>{});
+});
+
 const savedUrl = localStorage.getItem('apiUrl');
 if(savedUrl) { S.url = savedUrl; document.getElementById('setup-url').value = savedUrl; enterApp(); }
 else { hideSplash(); }

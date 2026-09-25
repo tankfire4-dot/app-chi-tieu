@@ -28,7 +28,9 @@ const D = {
   success: true, total: 12550000, totalIncome: 10000000,
   byPerson: { Khoa: 12550000 }, byCategory: {}
 };
+// Từ 25/09 app tự tính trên sổ (không nhận tổng từ backend nữa) → sổ phải chứa luôn dòng thu nhập 10tr.
 const ROWS = [
+  { date: '01/08/2026', name: 'Khoa', category: 'Thu nhập', subcategory: 'Lương', amount: 10000000 },
   { date: '02/08/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Học tập/ Phát triển bản thân', detail: 'khóa học dài ngoằng để ép chữ xuống dòng', amount: 12000000 },
   { date: '03/08/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Tiền ăn', amount: 500000 },
   { date: '04/08/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Gym, thể thao, TPBS', amount: 50000 },
@@ -49,8 +51,9 @@ const DEBTS = [{ name: 'A. Hải', balance: 700000 }, { name: 'C. Kỳ', balance
     await page.addInitScript(({ d, rows, debts }) => {
       window.fetch = async (u) => {
         const a = new URL(u, location.href).searchParams.get('action');
-        const data = a === 'getStatsBundle' ? { stats: d, prev: null, rows, debts: { debts } }
-          : a === 'getStats' ? d : a === 'getRows' ? { rows } : a === 'getDebts' ? { debts } : {};
+        // Sổ trên máy đồng bộ bằng getRows scope=all (mới nhất trước, có số dòng như Code.gs)
+        const book = rows.map((r, i) => Object.assign({ rowIndex: i + 2, detail: '', collected: false, collectedDate: '' }, r)).reverse();
+        const data = a === 'getRows' ? { rows: book, scope: 'all' } : a === 'getStats' ? d : a === 'getDebts' ? { debts } : {};
         return { ok: true, status: 200, json: async () => Object.assign({ success: true }, data) };
       };
     }, { d: D, rows: ROWS, debts: DEBTS });

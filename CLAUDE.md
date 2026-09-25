@@ -55,9 +55,10 @@ sẽ chỉ thấy vỏ trống). Font **Plus Jakarta Sans**. Hàm render then ch
 điền SHEET_ID. Token `chi_tieu_app_secret_2024`. Tự tạo + seed Sheet lần đầu (getConfig). Sheet 3 tab;
 tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi tiết | Số tiền | Đã thu | Ngày thu**.
 **Dòng 2 của tab `danh_sach_ten` = chủ app (OWNER)**, app xoay theo.
-**Mỗi lệnh Apps Script ~3s sàn** (đo 25/09) → màn nào cần nhiều thứ thì dùng LỆNH GỘP (`getHome`,
-`getStatsBundle`, đọc Sheet 1 lần), đừng bắn thêm lệnh lẻ. Frontend tự lùi về lệnh lẻ nếu backend
-chưa có lệnh gộp. Lệnh ghi chạy nền (`saveInBackground`), form không đứng đợi.
+**SỔ TRÊN MÁY (local-first, từ v60):** mỗi lệnh Apps Script ~3s sàn, lúc nguội 40–80s (đo 25/09),
+nên frontend giữ bản sao cả sổ (`ct_book`), vẽ từ đó rồi `syncBook()` ở nền. Số liệu tính bằng
+`local*` trong index.html = bản dịch 1-1 của `*Of` trong Code.gs → **sửa công thức phải sửa CẢ HAI**,
+test mục 12 so hai bên. Lệnh ghi chạy nền (`saveInBackground`) rồi ép đồng bộ.
 
 ---
 
