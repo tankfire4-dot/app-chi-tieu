@@ -49,7 +49,8 @@ const DEBTS = [{ name: 'A. Hải', balance: 700000 }, { name: 'C. Kỳ', balance
     await page.addInitScript(({ d, rows, debts }) => {
       window.fetch = async (u) => {
         const a = new URL(u, location.href).searchParams.get('action');
-        const data = a === 'getStats' ? d : a === 'getRows' ? { rows } : a === 'getDebts' ? { debts } : {};
+        const data = a === 'getStatsBundle' ? { stats: d, prev: null, rows, debts: { debts } }
+          : a === 'getStats' ? d : a === 'getRows' ? { rows } : a === 'getDebts' ? { debts } : {};
         return { ok: true, status: 200, json: async () => Object.assign({ success: true }, data) };
       };
     }, { d: D, rows: ROWS, debts: DEBTS });

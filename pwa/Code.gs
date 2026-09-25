@@ -73,7 +73,9 @@ var SEED_CATS = [
 ];
 
 // ============ HÀM PHỤ — SHEET ============
-function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
+// Mở Sheet 1 lần cho cả lượt chạy — mỗi lần openById tốn thêm thời gian, mà 1 lệnh cũ gọi tới 4–6 lần.
+var _ss = null;
+function getSS() { return _ss || (_ss = SpreadsheetApp.openById(SHEET_ID)); }
 function getSheet() { return getSS().getSheetByName(TAB_DATA); }
 
 // Tự tạo các tab + seed dữ liệu mẫu nếu chưa có (chạy lần đầu)
@@ -198,6 +200,136 @@ function dateStr(val) {
     : String(val);
 }
 
+// ============ TÍNH TỪ BẢNG ĐÃ ĐỌC ============
+// Mỗi hàm dưới nhận `data` = toàn bộ tab to_nhap_lieu (8 cột, từ dòng 2) đã đọc SẴN, để lệnh gộp
+// (getHome, getStatsBundle) đọc Sheet 1 lần rồi tính nhiều thứ. Lệnh lẻ cũ cũng đi qua đây nên
+// hai đường không thể lệch công thức.
+function readData() {
+  var sheet = getSheet();
+  var last  = sheet.getLastRow();
+  return last < 2 ? [] : sheet.getRange(2, 1, last - 1, 8).getValues();
+}
+
+function toRow(row, rowIndex) {
+  return {
+    rowIndex:      rowIndex,
+    date:          dateStr(row[0]),
+    name:          String(row[1] || ""),
+    category:      String(row[2] || ""),
+    subcategory:   String(row[3] || ""),
+    detail:        String(row[4] || ""),
+    amount:        Number(row[5]) || 0,
+    collected:     row[6] === true,
+    collectedDate: row[7] ? dateStr(row[7]) : ""
+  };
+}
+
+// Dòng thuộc kỳ (month/year rỗng = không lọc vế đó), mới nhất trước
+function rowsOf(data, month, year) {
+  var rows = [];
+  data.forEach(function(row, i) {
+    var d = dateStr(row[0]);
+    if (month && d.slice(3, 5) !== month) return;
+    if (year  && d.slice(6, 10) !== year)  return;
+    rows.push(toRow(row, i + 2));
+  });
+  return rows.reverse();
+}
+
+function statsOf(data, month, year) {
+  var total = 0, totalIncome = 0, byPerson = {}, byCat = {};
+  data.forEach(function(row) {
+    var d = dateStr(row[0]);
+    if (month && d.slice(3, 5) !== month) return;
+    if (year  && d.slice(6, 10) !== year)  return;
+
+    var name = String(row[1] || "");
+    var sub  = String(row[3] || "");
+    var amt  = Number(row[5]) || 0;
+
+    // Thu nhập tách riêng, không lẫn vào thống kê chi tiêu
+    if (String(row[2]) === "Thu nhập") { totalIncome += amt; return; }
+
+    total += amt;
+    byPerson[name] = (byPerson[name] || 0) + amt;
+    if (sub) byCat[sub] = (byCat[sub] || 0) + amt;
+  });
+  return { total: total, totalIncome: totalIncome, byPerson: byPerson, byCategory: byCat };
+}
+
+function debtsOf(data) {
+  var debtMap = {}, collected = [];
+  data.forEach(function(row, i) {
+    if (String(row[2]) !== "Cho mượn/ Ứng") return;
+
+    var name = String(row[1] || "");
+    var amt  = Number(row[5]) || 0;
+
+    if (row[6] === true) {
+      // đã thu/đã trả → vào lịch sử (chỉ tính khoản có ngày thu)
+      if (row[7]) {
+        collected.push({
+          rowIndex:      i + 2,
+          name:          name,
+          detail:        String(row[4] || ""),
+          amount:        amt,
+          date:          dateStr(row[0]),
+          collectedDate: dateStr(row[7])
+        });
+      }
+      return;
+    }
+
+    if (!debtMap[name]) debtMap[name] = { balance: 0, rows: [] };
+    debtMap[name].balance += amt;
+    debtMap[name].rows.push({
+      rowIndex: i + 2,
+      date:     dateStr(row[0]),
+      detail:   String(row[4] || ""),
+      amount:   amt
+    });
+  });
+
+  var debts = Object.keys(debtMap).map(function(name) {
+    return { name: name, balance: debtMap[name].balance, rows: debtMap[name].rows };
+  }).sort(function(a, b) { return b.balance - a.balance; });
+
+  // Lịch sử đã thu: mới nhất trước, lấy tối đa 20 khoản
+  collected.sort(function(a, b) { return dateKey(b.collectedDate) < dateKey(a.collectedDate) ? -1 : 1; });
+  return { debts: debts, recentCollected: collected.slice(0, 20) };
+}
+
+// Số dư = ban đầu + thu nhập − chi cá nhân − cho mượn CHƯA thu
+// (cho mượn đã thu = tiền ra rồi quay về → triệt tiêu)
+function balanceOf(data) {
+  var startBalance = Number(readCfg("so_du_ban_dau")) || 0;
+  var startRaw     = readCfg("tu_ngay");
+  var startDate    = startRaw instanceof Date ? dateStr(startRaw) : String(startRaw || "");
+  var startKey     = dateKey(startDate);
+  var income = 0, spent = 0, pending = 0;
+
+  data.forEach(function(row) {
+    var d = dateStr(row[0]);
+    if (startKey && dateKey(d) < startKey) return; // trước ngày bắt đầu, bỏ qua
+
+    var cat = String(row[2] || "");
+    var amt = Number(row[5]) || 0;
+
+    if (cat === "Thu nhập")      income += amt;
+    else if (cat === "Cá nhân")  spent  += amt;
+    else if (cat === "Cho mượn/ Ứng" && row[6] !== true) pending += amt;
+  });
+
+  return {
+    balance:      startBalance + income - spent - pending,
+    income:       income,
+    spent:        spent,
+    pending:      pending,        // dương = đang cho mượn, âm = đang nợ
+    startBalance: startBalance,
+    startDate:    startDate
+  };
+}
+
 function ok(data) {
   return ContentService
     .createTextOutput(JSON.stringify(Object.assign({ success: true }, data)))
@@ -292,47 +424,48 @@ function doGet(e) {
 
         if (scopeAll || month || year) {
           var data = sheet.getRange(2, 1, last - 1, 8).getValues();
-          var rows = [];
-          data.forEach(function(row, i) {
-            var d = dateStr(row[0]);
-            if (!scopeAll) {
-              if (month && d.slice(3, 5) !== month) return;
-              if (year  && d.slice(6, 10) !== year)  return;
-            }
-            rows.push({
-              rowIndex:      i + 2,
-              date:          d,
-              name:          String(row[1] || ""),
-              category:      String(row[2] || ""),
-              subcategory:   String(row[3] || ""),
-              detail:        String(row[4] || ""),
-              amount:        Number(row[5]) || 0,
-              collected:     row[6] === true,
-              collectedDate: row[7] ? dateStr(row[7]) : ""
-            });
-          });
-          return ok({ rows: rows.reverse(), scope: scopeAll ? "all" : "" });
+          return ok({ rows: scopeAll ? rowsOf(data, "", "") : rowsOf(data, month, year), scope: scopeAll ? "all" : "" });
         }
 
         var limit = Math.min(parseInt(p.limit || "100"), 500);
         var start = Math.max(2, last - limit + 1);
         var data  = sheet.getRange(start, 1, last - start + 1, 8).getValues();
 
-        var rows = data.map(function(row, i) {
-          return {
-            rowIndex:      start + i,
-            date:          dateStr(row[0]),
-            name:          String(row[1] || ""),
-            category:      String(row[2] || ""),
-            subcategory:   String(row[3] || ""),
-            detail:        String(row[4] || ""),
-            amount:        Number(row[5]) || 0,
-            collected:     row[6] === true,
-            collectedDate: row[7] ? dateStr(row[7]) : ""
-          };
-        }).reverse();
+        var rows = data.map(function(row, i) { return toRow(row, start + i); }).reverse();
 
         return ok({ rows: rows });
+      }
+
+      // ── Trang chủ: dòng của tháng + số dư, ĐỌC SHEET 1 LẦN ──
+      // Thay cho getRows(month,year) + getBalance gọi nối đuôi — mỗi lệnh Apps Script tốn ~3s sàn
+      // dù dữ liệu ít (đo thật 25/09), nên gộp 2 lệnh = bớt nửa thời gian chờ.
+      case "getHome": {
+        var data = readData();
+        return ok({ rows: rowsOf(data, p.month || "", p.year || ""), balance: balanceOf(data) });
+      }
+
+      // ── Thống kê: tổng kỳ + tháng trước + dòng kỳ + công nợ, ĐỌC SHEET 1 LẦN ──
+      // Thay cho 4 lệnh lẻ (getStats, getStats tháng trước, getRows, getDebts). Cùng hợp đồng phạm vi
+      // với lệnh lẻ: scope=all = toàn bộ lịch sử; không cờ thì năm mặc định là năm hiện tại.
+      case "getStatsBundle": {
+        var scopeAll = String(p.scope || "") === "all";
+        var month = scopeAll ? "" : (p.month || "");
+        var year  = scopeAll ? "" : (p.year  || String(new Date().getFullYear()));
+        var data  = readData();
+
+        var stats = statsOf(data, month, year);
+        stats.month = month; stats.year = year; stats.scope = scopeAll ? "all" : "";
+
+        var prev = null;
+        if (month && year) {
+          var pm = parseInt(month, 10) - 1, py = parseInt(year, 10);
+          if (pm === 0) { pm = 12; py--; }
+          var pmStr = (pm < 10 ? "0" : "") + pm;
+          prev = statsOf(data, pmStr, String(py));
+          prev.month = pmStr; prev.year = String(py);
+        }
+
+        return ok({ stats: stats, prev: prev, rows: rowsOf(data, month, year), debts: debtsOf(data) });
       }
 
       // ── Ghi 1 dòng (chi tiêu hoặc thu nhập) ────────────────
@@ -510,125 +643,25 @@ function doGet(e) {
         var scopeAll = String(p.scope || "") === "all";
         var month = scopeAll ? "" : (p.month || "");
         var year  = scopeAll ? "" : (p.year  || String(new Date().getFullYear()));
-        var sheet = getSheet();
-        var last  = sheet.getLastRow();
-        if (last < 2) return ok({ total: 0, totalIncome: 0, byPerson: {}, byCategory: {} });
+        var data = readData();
+        if (!data.length) return ok({ total: 0, totalIncome: 0, byPerson: {}, byCategory: {} });
 
-        var data        = sheet.getRange(2, 1, last - 1, 7).getValues();
-        var total       = 0;
-        var totalIncome = 0;
-        var byPerson    = {};
-        var byCat       = {};
-
-        data.forEach(function(row) {
-          var d = dateStr(row[0]);
-          if (month && d.slice(3, 5) !== month) return;
-          if (year  && d.slice(6, 10) !== year)  return;
-
-          var name = String(row[1] || "");
-          var sub  = String(row[3] || "");
-          var amt  = Number(row[5]) || 0;
-
-          // Thu nhập tách riêng, không lẫn vào thống kê chi tiêu
-          if (String(row[2]) === "Thu nhập") { totalIncome += amt; return; }
-
-          total += amt;
-          byPerson[name] = (byPerson[name] || 0) + amt;
-          if (sub) byCat[sub] = (byCat[sub] || 0) + amt;
-        });
-
-        return ok({ total: total, totalIncome: totalIncome, byPerson: byPerson, byCategory: byCat, month: month, year: year, scope: scopeAll ? "all" : "" });
+        var s = statsOf(data, month, year);
+        s.month = month; s.year = year; s.scope = scopeAll ? "all" : "";
+        return ok(s);
       }
 
       // ── Công nợ ────────────────────────────────────────────
       case "getDebts": {
-        var sheet = getSheet();
-        var last  = sheet.getLastRow();
-        if (last < 2) return ok({ debts: [] });
-
-        var data      = sheet.getRange(2, 1, last - 1, 8).getValues();
-        var debtMap   = {};
-        var collected = [];
-
-        data.forEach(function(row, i) {
-          if (String(row[2]) !== "Cho mượn/ Ứng") return;
-
-          var name = String(row[1] || "");
-          var amt  = Number(row[5]) || 0;
-
-          if (row[6] === true) {
-            // đã thu/đã trả → vào lịch sử (chỉ tính khoản có ngày thu)
-            if (row[7]) {
-              collected.push({
-                rowIndex:      i + 2,
-                name:          name,
-                detail:        String(row[4] || ""),
-                amount:        amt,
-                date:          dateStr(row[0]),
-                collectedDate: dateStr(row[7])
-              });
-            }
-            return;
-          }
-
-          if (!debtMap[name]) debtMap[name] = { balance: 0, rows: [] };
-          debtMap[name].balance += amt;
-          debtMap[name].rows.push({
-            rowIndex: i + 2,
-            date:     dateStr(row[0]),
-            detail:   String(row[4] || ""),
-            amount:   amt
-          });
-        });
-
-        var debts = Object.keys(debtMap).map(function(name) {
-          return { name: name, balance: debtMap[name].balance, rows: debtMap[name].rows };
-        }).sort(function(a, b) { return b.balance - a.balance; });
-
-        // Lịch sử đã thu: mới nhất trước, lấy tối đa 20 khoản
-        collected.sort(function(a, b) { return dateKey(b.collectedDate) < dateKey(a.collectedDate) ? -1 : 1; });
-        var recentCollected = collected.slice(0, 20);
-
-        return ok({ debts: debts, recentCollected: recentCollected });
+        var data = readData();
+        if (!data.length) return ok({ debts: [] });
+        return ok(debtsOf(data));
       }
 
-      // ── Số dư dòng tiền ────────────────────────────────────
-      // Số dư = ban đầu + thu nhập − chi cá nhân − cho mượn CHƯA thu
-      // (cho mượn đã thu = tiền ra rồi quay về → triệt tiêu)
+      // ── Số dư dòng tiền (công thức ở balanceOf) ────────────
       case "getBalance": {
         ensureSetup();
-        var startBalance = Number(readCfg("so_du_ban_dau")) || 0;
-        var startRaw     = readCfg("tu_ngay");
-        var startDate    = startRaw instanceof Date ? dateStr(startRaw) : String(startRaw || "");
-        var startKey     = dateKey(startDate);
-
-        var sheet = getSheet();
-        var last  = sheet.getLastRow();
-        var income = 0, spent = 0, pending = 0;
-
-        if (last >= 2) {
-          var data = sheet.getRange(2, 1, last - 1, 7).getValues();
-          data.forEach(function(row) {
-            var d = dateStr(row[0]);
-            if (startKey && dateKey(d) < startKey) return; // trước ngày bắt đầu, bỏ qua
-
-            var cat = String(row[2] || "");
-            var amt = Number(row[5]) || 0;
-
-            if (cat === "Thu nhập")      income += amt;
-            else if (cat === "Cá nhân")  spent  += amt;
-            else if (cat === "Cho mượn/ Ứng" && row[6] !== true) pending += amt;
-          });
-        }
-
-        return ok({
-          balance:      startBalance + income - spent - pending,
-          income:       income,
-          spent:        spent,
-          pending:      pending,        // dương = đang cho mượn, âm = đang nợ
-          startBalance: startBalance,
-          startDate:    startDate
-        });
+        return ok(balanceOf(readData()));
       }
 
       // ── Cài số dư ban đầu ──────────────────────────────────

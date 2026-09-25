@@ -41,12 +41,14 @@ function makeBackend(rows) {
     getLastRow: () => rows.length + 1,                     // +1 vì dòng 1 là header
     getRange: (r, c, nr, nc) => ({
       getValues: () => rows.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)),
-      getValue:  () => rows[r - 2][c - 1]
+      getValue:  () => (r === 1 ? 'tiêu đề' : rows[r - 2][c - 1])   // dòng 1 = header (ensureSetup đọc)
     })
   };
+  // Các tab phụ (tên người, hạng mục, cấu hình) có sẵn nhưng trống → ensureSetup không phải tạo mới
+  const emptyTab = { getLastRow: () => 1, getRange: () => ({ getValues: () => [], getValue: () => 'tiêu đề' }) };
   const out = (t) => ({ __text: t, setMimeType: () => out(t) });
   const ctx = vm.createContext({
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : null) }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : emptyTab) }) },
     ContentService: { createTextOutput: out, MimeType: { JSON: 'application/json' } },
     Utilities:      { formatDate: (d) => d },
     LockService:    { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
@@ -155,6 +157,11 @@ const F_KY = [                                            // kỳ mẫu 08/2026 
   row('05/08/2026', 'Cho mượn/ Ứng', 'Cty',  -500000),
   row('06/08/2026', 'Cho mượn/ Ứng', 'Marketing', 2000000, { collected: true })
 ];
+// Backend BẢN CŨ (chưa dán Code.gs mới): không có lệnh gộp → trả "Unknown action" như Code.gs thật.
+const NEW_ACTIONS = ['getHome', 'getStatsBundle'];
+const legacy = (be) => (params) => NEW_ACTIONS.includes(params.action)
+  ? { success: false, error: 'Unknown action: ' + params.action } : be(params);
+
 const period = (be, month, year) => ({
   d: be({ action: 'getStats', month, year }),
   rows: be({ action: 'getRows', month, year }).rows
@@ -280,7 +287,22 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
   }
 
   // đi qua loadStats thật: lần 1 mạng sống (ghi cache) → lần 2 cắt mạng (đọc cache) → phải y hệt
-  const app2 = makeApp(be);
+  // (đường lệnh gộp getStatsBundle)
+  const appB = makeApp(be);
+  const freshB = await appB.loadStats('2026', '08');
+  appB.net.offline = true;
+  eq('7. [gộp] cached render == fresh render', (await appB.loadStats('2026', '08')) === freshB, true);
+  const bundleCalls = appB.net.calls.filter(c => c.action === 'getStatsBundle');
+  check('7. [gộp] chỉ 1 lệnh getStatsBundle mang đúng kỳ, không lệnh lẻ nào',
+        appB.net.calls.every(c => c.action === 'getStatsBundle') && bundleCalls.every(c => c.month === '08' && c.year === '2026'),
+        appB.net.calls.map(c => c.action + ':' + c.month + '/' + c.year));
+  const appBA = makeApp(be);
+  await appBA.loadStats('', '');
+  check('7. [gộp] Tất cả năm → getStatsBundle mang scope=all',
+        appBA.net.calls.length === 1 && appBA.net.calls[0].scope === 'all' && !appBA.net.calls[0].year, appBA.net.calls);
+
+  // Các phép dưới kiểm ĐƯỜNG CŨ (backend chưa dán bản mới) — phải giữ nguyên hành vi trước.
+  const app2 = makeApp(legacy(be));
   const fresh = await app2.loadStats('2026', '08');
   app2.net.offline = true;
   const cached = await app2.loadStats('2026', '08');
@@ -292,14 +314,14 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
         app2.net.calls.map(c => c.action + ':' + c.month + '/' + c.year));
 
   // "Tất cả năm" phải xin cờ scope=all cho CẢ HAI lệnh, không dùng year='' để ngầm đoán
-  const app3 = makeApp(be);
+  const app3 = makeApp(legacy(be));
   await app3.loadStats('', '');
   const scoped = app3.net.calls.filter(c => ['getStats', 'getRows'].includes(c.action));
   check('7. Tất cả năm → cả getStats lẫn getRows đều mang scope=all',
         scoped.length >= 2 && scoped.every(c => c.scope === 'all' && !c.limit), scoped);
 
   // thiếu một vế trong cache (rows rớt vì hết quota) → KHÔNG được vẽ nửa đúng nửa thiếu
-  const app4 = makeApp(be);
+  const app4 = makeApp(legacy(be));
   await app4.loadStats('2026', '08');
   [...app4.store.keys()].filter(k => k.includes('getRows')).forEach(k => app4.store.delete(k));
   app4.net.offline = true;
@@ -325,6 +347,106 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
   const h2 = app.render(d, '08', '2026', debts, prev, rows);
   check('8. so tháng trước: thu nhập ↑25%', h2.includes('↑25% so tháng trước'),
         (h2.match(/[↑↓]\d+% so tháng trước/g) || []));
+}
+
+// ============ 9. LỆNH GỘP = ĐÚNG Y CÁC LỆNH LẺ ============
+{
+  const many = F_KY.concat([
+    row('10/07/2026', 'Thu nhập', 'Lương', 8000000),
+    row('11/07/2026', 'Cá nhân',  'Tiền ăn', 900000),
+    row('12/12/2025', 'Cá nhân',  'Nhà', 3000000),
+    row('03/01/2026', 'Cho mượn/ Ứng', 'Cty', 400000, { name: 'A. Hải', collected: true, collectedDate: '05/01/2026' })
+  ]);
+  const be = makeBackend(many);
+  const strip = (o) => { const x = Object.assign({}, o); delete x.success; return x; };
+
+  const h = be({ action: 'getHome', month: '08', year: '2026' });
+  eq('9. getHome.rows == getRows(08/2026)', h.rows, be({ action: 'getRows', month: '08', year: '2026' }).rows);
+  eq('9. getHome.balance == getBalance', h.balance, strip(be({ action: 'getBalance' })));
+
+  const b = be({ action: 'getStatsBundle', month: '08', year: '2026' });
+  eq('9. bundle.stats == getStats(08/2026)', b.stats, strip(be({ action: 'getStats', month: '08', year: '2026' })));
+  const pv = strip(be({ action: 'getStats', month: '07', year: '2026' })); delete pv.scope;
+  eq('9. bundle.prev == getStats tháng trước (07/2026)', b.prev, pv);
+  eq('9. bundle.rows == getRows(08/2026)', b.rows, be({ action: 'getRows', month: '08', year: '2026' }).rows);
+  eq('9. bundle.debts == getDebts', b.debts, strip(be({ action: 'getDebts' })));
+
+  const j = be({ action: 'getStatsBundle', month: '01', year: '2026' });
+  eq('9. tháng 01 → tháng trước là 12/2025', [j.prev.month, j.prev.year, j.prev.byCategory], ['12', '2025', { 'Nhà': 3000000 }]);
+
+  const a = be({ action: 'getStatsBundle', scope: 'all' });
+  eq('9. bundle scope=all.stats == getStats scope=all', a.stats, strip(be({ action: 'getStats', scope: 'all' })));
+  eq('9. bundle scope=all.rows == getRows scope=all', a.rows, be({ action: 'getRows', scope: 'all' }).rows);
+  eq('9. bundle scope=all không có tháng trước', a.prev, null);
+}
+
+// ============ 10. TRANG CHỦ: 1 LỆNH, BACKEND CŨ THÌ LÙI VỀ ĐƯỜNG CŨ ============
+{
+  const now = new Date(), mm = String(now.getMonth() + 1).padStart(2, '0'), yy = String(now.getFullYear());
+  const today = String(now.getDate()).padStart(2, '0') + '/' + mm + '/' + yy;
+  const be = makeBackend([row(today, 'Cá nhân', 'Tiền ăn', 45000, { detail: 'phở' })]);
+
+  const app = makeApp(be);
+  app.run('initMonthTabs()'); await app.run('loadHome()');
+  eq('10. mới: trang chủ chỉ 1 lệnh getHome', app.net.calls.map(c => c.action), ['getHome']);
+  check('10. mới: danh sách có khoản phở', app.els.get('tx-list').innerHTML.includes('phở'));
+
+  const old = makeApp(legacy(be));
+  old.run('initMonthTabs()'); await old.run('loadHome()');
+  eq('10. cũ: getHome hỏng 1 lần (không thử lại) rồi getRows + getBalance',
+     old.net.calls.map(c => c.action).sort(), ['getBalance', 'getHome', 'getRows']);
+  check('10. cũ: vẫn hiện khoản phở', old.els.get('tx-list').innerHTML.includes('phở'));
+  old.net.calls.length = 0; await old.run('loadHome()'); await old.loadStats('2026', '08');
+  check('10. cũ: đã nhớ backend cũ → lần sau KHÔNG gọi lệnh gộp nữa',
+        !old.net.calls.some(c => NEW_ACTIONS.includes(c.action)), old.net.calls.map(c => c.action));
+}
+
+// ============ 11. LƯU NỀN: FORM ĐÓNG NGAY, LỖI THÌ BÁO RÕ, KHÔNG GHI TRÙNG ============
+{
+  const rows = [];
+  const be = makeBackend(rows);
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+  // backend giả giữ lệnh ghi lại cho tới khi test thả ra → thấy được khoảnh khắc "đang lưu"
+  let release, fail = false, writes = 0;
+  const slow = (params) => {
+    if (params.action !== 'addRow') return be(params);
+    writes++;
+    return new Promise((res) => { release = () => {
+      if (fail) return res({ success: false, error: 'Mất mạng' });
+      rows.push(row(today, 'Cá nhân', '', Number(params.amount), { detail: params.detail }));
+      res({ success: true, rowIndex: rows.length + 1, subcategory: '' });
+    }; });
+  };
+  const app = makeApp(be);
+  // fetch giả mặc định gọi backend đồng bộ; thay bằng bản chờ được backend chậm
+  app.ctx.fetch = async (u) => {
+    const url = new URL(u); const params = {}; url.searchParams.forEach((v, k) => (params[k] = v));
+    app.net.calls.push(params);
+    const json = await slow(params);
+    return { ok: true, status: 200, json: async () => json };
+  };
+  app.run("initMonthTabs(); OWNER='Khoa'; S.selectedPerson0='Khoa'; S.kind0='chi'; S.amts[0]='45000'; document.getElementById('dt0').value='bún bò'");
+  const done = app.run('submit0()');
+  await new Promise(r => setTimeout(r, 0));
+  const list = () => app.els.get('tx-list').innerHTML;
+  check('11. chưa đợi backend: khoản mới đã hiện "Đang lưu…"', list().includes('bún bò') && list().includes('Đang lưu'), list().slice(0, 200));
+  eq('11. form đã reset ngay (số tiền về 0)', app.run('S.amts[0]'), '0');
+  release(); await done; await new Promise(r => setTimeout(r, 0));
+  check('11. xong: hết chữ "Đang lưu", khoản thật từ Sheet hiện ra', !list().includes('Đang lưu') && list().includes('bún bò'), list().slice(0, 200));
+  eq('11. xong: Sheet có đúng 1 dòng', rows.length, 1);
+  eq('11. xong: nút Hoàn tác biết dòng vừa ghi', app.run('S.lastRowIndex'), 2);
+
+  fail = true;
+  app.run("S.selectedPerson0='Khoa'; S.amts[0]='30000'; document.getElementById('dt0').value='trà đá'");
+  const done2 = app.run('submit0()');
+  await new Promise(r => setTimeout(r, 0));
+  release(); await done2;
+  eq('11. lỗi: lệnh ghi KHÔNG tự thử lại (chống ghi trùng)', writes, 2);
+  const toast = app.els.get('toast').textContent;
+  check('11. lỗi: báo rõ khoản nào chưa lưu', toast.includes('trà đá') && toast.includes('30.000') && toast.includes('Mất mạng'), toast);
+  await new Promise(r => setTimeout(r, 0));
+  check('11. lỗi: dòng "Đang lưu" biến mất, không để khoản ma', !list().includes('trà đá'), list().slice(0, 200));
 }
 
 // ============ KẾT ============

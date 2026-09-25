@@ -12,6 +12,42 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-09-25 — App lag: bớt số lần gọi Apps Script + lưu nền
+
+**Vấn đề:** Khoa thấy app "dạo này lag", hỏi có nên chuyển hẳn sang Apps Script. Đo thật backend
+(chỉ đọc, 2 vòng): **mỗi lệnh ~3s sàn** dù Sheet chỉ 709 dòng; lúc nguội giật lên **23–42s**
+(getDebts 23s, getRows scope=all 42s). Sheet nhỏ, nên thủ phạm là **phí mỗi lần gọi**, không phải
+dữ liệu. Trang chủ gọi 2 lệnh NỐI ĐUÔI (~6s), Thống kê 4 lệnh, bấm Lưu phải đứng đợi 3–5s.
+
+**Quyết định:**
+
+- **Không** chuyển giao diện sang Apps Script (HtmlService): app VỐN đã dùng Apps Script làm
+  backend, chuyển thì vẫn chờ đúng cái máy đó, lại mất cache/offline/icon cài máy.
+- Backend thêm 2 lệnh gộp, đọc Sheet **1 lần**: `getHome` (dòng tháng + số dư) và `getStatsBundle`
+  (tổng kỳ + tháng trước + dòng kỳ + công nợ). Công thức tách ra hàm chung (`rowsOf`, `statsOf`,
+  `debtsOf`, `balanceOf`) — lệnh lẻ cũ cũng đi qua đó nên hai đường không lệch được. `getSS()` mở
+  Sheet 1 lần/lượt chạy thay vì 4–6 lần.
+- Frontend: Trang chủ 2 lệnh → 1, Thống kê 4 → 1. **Lưu nền**: bấm Ghi là form đóng ngay, khoản
+  hiện mờ "Đang lưu…" trên cùng; lỗi thì toast 7s nêu rõ khoản nào + tải lại danh sách để tự nhìn.
+- **Backend chưa dán vẫn chạy:** gặp "Unknown action" thì lùi về lệnh lẻ (Trang chủ giờ gọi song
+  song thay vì nối đuôi) và nhớ trong phiên để không tốn thêm lệnh hỏng. Lỗi "Unknown action" không
+  thử lại (trước đây lệnh đọc tự thử 3 lần — 3 × 3s vô ích). Bump `v59`.
+
+**Vì sao:** Mỗi lệnh là một lần Google khởi động script, nên cắt số lệnh mới là cắt thời gian;
+tối ưu vòng lặp trên 709 dòng gần như không đổi gì. Lưu nền an toàn vì lệnh ghi vẫn KHÔNG tự thử
+lại, Hoàn tác vẫn chỉ hiện khi đã có số dòng thật.
+
+**Rủi ro còn lại:** lỗi mạng có thể về SAU khi Sheet đã ghi → toast bảo "xem danh sách, chưa có
+thì ghi lại" chứ không khẳng định "chưa lưu". Cú giật 20–40s lúc Google nguội thì app không chữa
+được — chỉ đỡ vì giờ ít lệnh hơn và Lưu không bắt đứng đợi.
+
+**Bằng chứng:** `tests/stats.test.mjs` **70/70** (thêm: lệnh gộp = y hệt lệnh lẻ, backend cũ lùi
+đúng + không thử lại, lưu nền hiện "Đang lưu" trước khi backend trả lời / lỗi không ghi trùng).
+Thử phá: bỏ chặn thử lại → đỏ; đợi lưu xong mới đóng form → test treo không ra ĐẠT.
+`tests/stats.browser.js` **30/30**. Chụp Chromium màn "Đang lưu…" 393px: không lỗi trang.
+
+---
+
 ## 2026-08-30 — Thống kê: % phải trên THU NHẬP, và "Tất cả năm" phải đọc đủ sổ
 
 **Vấn đề (Khoa nêu, Codex chẩn, Claude soát lại tận dòng — cả 3 đúng):**

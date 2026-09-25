@@ -559,10 +559,10 @@ let HM_THU      = ['💵 Lương','🎁 Thưởng','📦 Thu nhập khác'].map(
 const AVATAR_COLORS = ['bg-indigo-900 text-indigo-300','bg-purple-900 text-purple-300','bg-pink-900 text-pink-300','bg-orange-900 text-orange-300','bg-teal-900 text-teal-300','bg-amber-900 text-amber-300','bg-rose-900 text-rose-300','bg-emerald-900 text-emerald-300','bg-blue-900 text-blue-300','bg-cyan-900 text-cyan-300'];
 
 // ============ STATE ============
-let S = { url:'', prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, lastRowVerify:null, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
+let S = { url:'', pending:[], legacyApi:false, prevScreen:'home', rows:[], debts:[], lastRowIndex:0, lastRowCount:0, lastRowTime:0, lastRowVerify:null, amts:['0','0'], curMonth:0, curYear:0, selectedPerson0:'Khoa', kind0:'chi', dir0:'them_owe', oweMode0:'fronted', curTx:null, calcPrev0:0, calcOp0:'' };
 
 // ============ CACHE ============
-const CACHE_TTL = { getRows: 60, getDebts: 120, getStats: 300, getConfig: 86400 };
+const CACHE_TTL = { getRows: 60, getDebts: 120, getStats: 300, getConfig: 86400, getHome: 60, getStatsBundle: 300 };
 function cacheKey(params) { return 'ct_' + JSON.stringify(params); }
 function cacheGet(params) {
   const k = cacheKey(params); const raw = localStorage.getItem(k);
@@ -579,7 +579,7 @@ function cacheSet(params, data) {
 // Apps Script hay trả 404/302 chập chờn khi bị bắn nhiều request cùng lúc. Thử lại cho lệnh ĐỌC
 // (idempotent, an toàn). Lệnh GHI KHÔNG tự thử lại — tránh ghi trùng (lệnh có thể đã vào Sheet dù
 // phản hồi lỗi). Muốn cho phép thử lại thủ công thì truyền {retry:n}.
-const READ_ACTIONS = new Set(['getConfig','getRows','getBalance','getStats','getDebts','getPeople']);
+const READ_ACTIONS = new Set(['getConfig','getRows','getBalance','getStats','getDebts','getPeople','getHome','getStatsBundle']);
 async function api(params, {useCache=false, retry}={}) {
   if (useCache) { const hit = cacheGet(params); if (hit) return hit; }
   const url = new URL(S.url);
@@ -591,11 +591,17 @@ async function api(params, {useCache=false, retry}={}) {
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error('HTTP '+res.status);
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Lỗi không xác định');
+      if (!data.success) {
+        const e = new Error(data.error || 'Lỗi không xác định');
+        // Backend bản cũ chưa có lệnh này → thử lại vô ích (mỗi lần ~3s), trả lỗi ngay để caller lùi về lệnh cũ.
+        if (/^Unknown action/i.test(e.message)) { e.noRetry = true; throw e; }
+        throw e;
+      }
       cacheSet(params, data);
       return data;
     } catch(e) {
       lastErr = e;
+      if (e.noRetry) break;
       if (i < attempts - 1) await new Promise(r => setTimeout(r, 500 * (i+1)));
     }
   }
@@ -706,20 +712,40 @@ function initMonthTabs() {
 }
 
 // ============ LOAD HOME ============
+// Backend chưa dán bản có lệnh gộp → nhớ trong phiên, khỏi tốn thêm 1 lệnh hỏng (~3s) mỗi lần tải.
+const isUnknownAction = e => /^Unknown action/i.test((e && e.message) || '');
+
 async function loadHome() {
-  const rowParams = {action:'getRows', month:String(S.curMonth).padStart(2,'0'), year:S.curYear};
+  const month = String(S.curMonth).padStart(2,'0'), year = String(S.curYear);
+  if (S.legacyApi) return loadHomeLegacy(month, year);
+  // 1 lệnh getHome (dòng tháng + số dư, backend đọc Sheet 1 lần) thay 2 lệnh nối đuôi. Mỗi lệnh Apps
+  // Script tốn ~3s sàn dù Sheet nhỏ (đo thật 25/09) → trang chủ bớt nửa thời gian chờ.
+  const p = {action:'getHome', month, year};
+  const cached = cacheGet(p);
+  if (cached) { S.rows = cached.rows || []; renderRows(); renderBalance(cached.balance || {}); }
+  try {
+    const d = await api(p);
+    S.rows = d.rows || []; renderRows(); renderBalance(d.balance || {});
+  } catch(e) {
+    if (isUnknownAction(e)) { S.legacyApi = true; return loadHomeLegacy(month, year); }
+    if (!cached) { showToast('Lỗi tải dữ liệu: '+e.message,'err'); document.getElementById('card-total').textContent = '—'; }
+  }
+}
+
+// Đường cũ cho backend chưa cập nhật — 2 lệnh chạy SONG SONG (trước đây nối đuôi, chờ gấp đôi).
+async function loadHomeLegacy(month, year) {
+  const rowParams = {action:'getRows', month, year};
   const balParams = {action:'getBalance'};
   const cachedRows = cacheGet(rowParams);
   if (cachedRows) { S.rows = cachedRows.rows || []; renderRows(); }
   const cachedBal = cacheGet(balParams);
   if (cachedBal) renderBalance(cachedBal);
-  try {
-    const d = await api(rowParams);
-    S.rows = d.rows || []; renderRows();
-  } catch(e) { if(!cachedRows) showToast('Lỗi tải dữ liệu: '+e.message,'err'); }
-  try {
-    renderBalance(await api(balParams));
-  } catch(e) { if(!cachedBal) document.getElementById('card-total').textContent = '—'; }
+  await Promise.all([
+    api(rowParams).then(d => { S.rows = d.rows || []; renderRows(); })
+      .catch(e => { if(!cachedRows) showToast('Lỗi tải dữ liệu: '+e.message,'err'); }),
+    api(balParams).then(renderBalance)
+      .catch(() => { if(!cachedBal) document.getElementById('card-total').textContent = '—'; })
+  ]);
 }
 
 function renderBalance(b) {
@@ -785,7 +811,8 @@ function recCalc() {
 
 function renderRows() {
   const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
-  const filtered = S.rows.filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y);
+  // Khoản đang lưu nền (S.pending) hiện trên cùng, mờ, không bấm được — chưa có số dòng trên Sheet.
+  const filtered = [...S.pending, ...S.rows].filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y);
   // Map hạng mục → emoji (icon nhóm chi tiêu) — dùng cho avatar giao dịch
   const EMO = {};
   [...HM_CA_NHAN, ...HM_CHO_MUON, ...HM_THU].forEach(h => { const e = h.label.match(/^(\S+)\s/); if (e && e[1] !== h.name) EMO[h.name] = e[1]; });
@@ -812,11 +839,14 @@ function renderRows() {
       const amtSign  = (isIncome || (isChoMuon && r.amount > 0)) ? '+' : (isChoMuon && r.amount < 0 ? '-' : '');
       const collIcon = (r.category==='Cho mượn/ Ứng' && !r.collected && r.amount>0)
         ? '<span style="color:#f59e0b;font-size:12px;margin-left:4px;">●</span>' : '';
-      html += `<div class="tx-row" onclick='openTxDetail(${esc(JSON.stringify(r))})'>
+      html += r.pending
+        ? `<div class="tx-row" style="opacity:0.55;cursor:default">`
+        : `<div class="tx-row" onclick='openTxDetail(${esc(JSON.stringify(r))})'>`;
+      html += `
         <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:21px;">${emoji}</div>
         <div class="flex-1 min-w-0">
           <p class="text-white text-sm font-semibold truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
-          <p class="text-gray-500 text-xs">${esc(r.name)}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${esc(r.subcategory||r.category)}</span></p>
+          <p class="text-gray-500 text-xs">${r.pending ? '<span class="spin">⟳</span> Đang lưu…' : `${esc(r.name)}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${esc(r.subcategory||r.category)}</span>`}</p>
         </div>
         <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}</p>
       </div>`;
@@ -965,6 +995,7 @@ async function loadStats() {
   // nay trong khi khối hạng mục lấy nhiều năm → tử số và mẫu số của phép chia % là hai kỳ khác nhau.
   // getStats và getRows LUÔN xin cùng một phạm vi, không bao giờ lệch.
   const allYears = !year;
+  if (!S.legacyApi && await loadStatsBundle(allYears, month, year)) return;
   const p  = allYears ? {action:'getStats', scope:'all'} : {action:'getStats', month, year};
   const pd = {action:'getDebts'};
   // Lấy các dòng đúng kỳ để tách Cá nhân/Cho mượn theo phân loại thật (xem renderStats).
@@ -999,6 +1030,28 @@ async function loadStats() {
     if (!cachedPair) document.getElementById('stats-content').innerHTML =
       '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
   }
+}
+
+// 1 lệnh getStatsBundle (tổng kỳ + tháng trước + dòng kỳ + công nợ, backend đọc Sheet 1 lần) thay 4
+// lệnh lẻ. Cùng hợp đồng phạm vi scope=all. Một gói = một mục cache, nên không còn cảnh cache nửa vời.
+// Trả false khi backend chưa có lệnh này → loadStats đi tiếp đường cũ.
+async function loadStatsBundle(allYears, month, year) {
+  const p = allYears ? {action:'getStatsBundle', scope:'all'} : {action:'getStatsBundle', month, year};
+  const draw = b => renderStats(b.stats || {}, month, year, (b.debts && b.debts.debts) || [], b.prev || null, b.rows || []);
+  const cached = cacheGet(p);
+  if (cached) draw(cached);
+  else document.getElementById('stats-content').innerHTML = '<div class="skel h-32 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl mb-4"></div><div class="skel h-48 rounded-2xl"></div>';
+  try {
+    const b = await api(p);
+    draw(b);
+    if (b.debts) cacheSet({action:'getDebts'}, b.debts);   // màn Công nợ mở sau đó hiện liền
+  } catch(e) {
+    if (isUnknownAction(e)) { S.legacyApi = true; return false; }
+    showToast('Lỗi tải thống kê','err');
+    if (!cached) document.getElementById('stats-content').innerHTML =
+      '<div class="glass rounded-2xl p-5 text-gray-400 text-sm">Không tải được thống kê — đóng mở lại app hoặc đổi bộ lọc để thử lại.</div>';
+  }
+  return true;
 }
 
 function renderStats(d, month, year, debts, prev, statRows) {
@@ -1444,7 +1497,32 @@ function setKind(kind) {
   else renderHM('hm0', S.selectedPerson0===OWNER ? HM_CA_NHAN : HM_CHO_MUON);
 }
 
-async function submit0() {
+// ============ LƯU NỀN ============
+// Mỗi lệnh ghi Apps Script tốn ~3–5s (đo thật 25/09). Trước đây form đứng im chờ đủ chừng đó mới đóng.
+// Giờ: đóng form NGAY, khoản mới hiện trên cùng Trang chủ dạng "Đang lưu…", lệnh ghi chạy nền.
+// Lệnh ghi vẫn KHÔNG tự thử lại (tránh ghi trùng). Lỗi → báo rõ khoản nào + tải lại danh sách để
+// người dùng nhìn tận mắt nó đã vào sổ hay chưa (lỗi mạng có thể đến SAU khi Sheet đã ghi).
+function todayVN() {
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function saveInBackground(preview, work, okMsg) {
+  const tmp = Object.assign({ date: todayVN(), pending: true }, preview);
+  S.pending.unshift(tmp);
+  renderRows();
+  showToast('Đang lưu…','ok');
+  return work().then(() => {
+    showToast(okMsg,'ok');
+  }).catch(e => {
+    showToast('Lỗi khi lưu "'+fmtDetail(preview.detail)+'" '+fmt(preview.amount)+'đ: '+e.message+' — xem danh sách, chưa có thì ghi lại','err',7000);
+  }).then(() => {
+    S.pending = S.pending.filter(x => x !== tmp);
+    renderRows();
+    loadHome();
+  });
+}
+
+function submit0() {
   if(S.calcOp0) {
     const res = calcEval(S.calcPrev0, S.calcOp0, parseInt(S.amts[0]||'0'));
     S.calcPrev0=0; S.calcOp0=''; S.amts[0]=String(res);
@@ -1455,66 +1533,72 @@ async function submit0() {
   if(!amt) { showToast('Nhập số tiền','err'); return; }
   const isThu = S.kind0==='thu';
   if(!isThu && !S.selectedPerson0) { showToast('Chọn người chi','err'); return; }
-  const btn = document.getElementById('btn0');
-  setLoading(btn, true);
-  try {
-    const detail = document.getElementById('dt0').value;
-    const isIOwe = !isThu && S.dir0==='i_owe';
-    if (isIOwe && S.oweMode0==='fronted') {
-      // Họ trả giúp → 2 dòng (mình chi + mình nợ họ). Ghi bằng 1 lệnh atomic addFronted để KHÔNG
-      // bao giờ nửa vời. Backend cũ chưa có addFronted → fallback 2 lệnh rời (giữ tương thích).
-      const sub = getHM('hm0');
+  // Chụp hết giá trị form TRƯỚC khi resetTab xóa chúng — lệnh ghi chạy sau khi form đã đóng.
+  const detail = document.getElementById('dt0').value;
+  const person = S.selectedPerson0;
+  const sub    = getHM('hm0');
+  const isIOwe = !isThu && S.dir0==='i_owe';
+  const fronted = isIOwe && S.oweMode0==='fronted';
+  let work, preview, okMsg;
+  if (fronted) {
+    // Họ trả giúp → 2 dòng (mình chi + mình nợ họ). Ghi bằng 1 lệnh atomic addFronted để KHÔNG
+    // bao giờ nửa vời. Backend cũ chưa có addFronted → fallback 2 lệnh rời (giữ tương thích).
+    preview = { name:OWNER, category:'Cá nhân', subcategory:sub, detail:detail||'Chi tiêu', amount:amt };
+    okMsg = 'Đã ghi — chi của bạn + bạn nợ họ ✓';
+    work = async () => {
       try {
-        const res = await api({ action:'addFronted', person:S.selectedPerson0, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
+        const res = await api({ action:'addFronted', person, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
         S.lastRowIndex = res.firstRow; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };   // dòng đầu block = mình chi (Code.gs addFronted)
       } catch(eF) {
         if (!/Unknown action/i.test(eF.message)) throw eF;   // lỗi thật (vd 404) → không fallback, tránh ghi trùng
         const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
-        await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:sub });
+        await api({ action:'addRow', name:person, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:sub });
         S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };
       }
-      resetTab(0); goBack();
-      setTimeout(()=>showToast('Đã ghi — chi của bạn + bạn nợ họ ✓','ok'),200);
-    } else if (isIOwe) {
-      // Vay tiền mặt → 1 dòng nợ duy nhất (số dư tự tăng, không tính chi tiêu)
-      const r1 = await api({ action:'addRow', name:S.selectedPerson0, detail:detail||'Vay tiền mặt', amount:-amt, subcategory:getHM('hm0') });
+    };
+  } else if (isIOwe) {
+    // Vay tiền mặt → 1 dòng nợ duy nhất (số dư tự tăng, không tính chi tiêu)
+    preview = { name:person, category:'Cho mượn/ Ứng', subcategory:sub, detail:detail||'Vay tiền mặt', amount:-amt };
+    okMsg = 'Đã ghi — vay tiền mặt, bạn nợ họ ✓';
+    work = async () => {
+      const r1 = await api({ action:'addRow', name:person, detail:detail||'Vay tiền mặt', amount:-amt, subcategory:sub });
       S.lastRowIndex = r1.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
-      S.lastRowVerify = { name:S.selectedPerson0, amount:-amt };   // dòng nợ ghi số ÂM
-      resetTab(0); goBack();
-      setTimeout(()=>showToast('Đã ghi — vay tiền mặt, bạn nợ họ ✓','ok'),200);
-    } else {
-      const params = isThu
-        ? { action:'addRow', kind:'income', name:OWNER, detail:detail||'Thu nhập', amount:amt, subcategory:getHM('hm0') }
-        : { action:'addRow', name:S.selectedPerson0, detail:detail||'Chi tiêu', amount:amt, subcategory:getHM('hm0') };
+      S.lastRowVerify = { name:person, amount:-amt };   // dòng nợ ghi số ÂM
+    };
+  } else {
+    const params = isThu
+      ? { action:'addRow', kind:'income', name:OWNER, detail:detail||'Thu nhập', amount:amt, subcategory:sub }
+      : { action:'addRow', name:person, detail:detail||'Chi tiêu', amount:amt, subcategory:sub };
+    preview = { name:params.name, category: isThu ? 'Thu nhập' : (person===OWNER ? 'Cá nhân' : 'Cho mượn/ Ứng'), subcategory:sub, detail:params.detail, amount:amt };
+    okMsg = isThu ? 'Đã ghi thu nhập ✓' : 'Đã ghi thành công ✓';
+    work = async () => {
       const res = await api(params);
       S.lastRowIndex = res.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
-      S.lastRowVerify = { name: isThu ? OWNER : S.selectedPerson0, amount:amt };
-      resetTab(0); goBack();
-      setTimeout(()=>showToast(isThu ? 'Đã ghi thu nhập ✓' : 'Đã ghi thành công ✓','ok'),200);
-    }
-  } catch(e) { showToast('Lỗi: '+e.message,'err'); }
-  setLoading(btn, false);
+      S.lastRowVerify = { name: params.name, amount:amt };
+    };
+  }
+  resetTab(0); goBack();
+  return saveInBackground(preview, work, okMsg);
 }
 
-async function submit1() {
+function submit1() {
   const amt = parseInt(S.amts[1]||'0');
   if(!amt) { showToast('Nhập số tiền','err'); return; }
   const people = [...document.querySelectorAll('#pc1 .chip-on')].map(c=>c.dataset.name);
   if(people.length<2) { showToast('Chọn ít nhất 2 người','err'); return; }
-  const btn = document.getElementById('btn1');
-  setLoading(btn, true);
-  try {
-    const res = await api({ action:'addSplit', detail: document.getElementById('dt1').value||'Chia bill', amount:amt, people:people.join('|'), subcategory: getHM('hm1') });
+  const detail = document.getElementById('dt1').value||'Chia bill';
+  const sub    = getHM('hm1');
+  const work = async () => {
+    const res = await api({ action:'addSplit', detail, amount:amt, people:people.join('|'), subcategory:sub });
     S.lastRowIndex = res.firstRow; S.lastRowCount = res.rowsAdded; S.lastRowTime = Date.now();
     // Dòng đầu block = people[0] nhận phần dư làm tròn (khớp Code.gs addSplit: per + rem)
     const per = res.perPerson, rem = amt - per*people.length;
     S.lastRowVerify = { name:people[0], amount:per + rem };
-    resetTab(1); goBack();
-    setTimeout(()=>showToast('Đã chia bill thành công ✓','ok'),200);
-  } catch(e) { showToast('Lỗi: '+e.message,'err'); }
-  setLoading(btn, false);
+  };
+  resetTab(1); goBack();
+  return saveInBackground({ name:OWNER, category:'Cá nhân', subcategory:sub, detail:detail+' (chia '+people.length+' người)', amount:amt }, work, 'Đã chia bill thành công ✓');
 }
 
 
@@ -1784,12 +1868,12 @@ function markCollectedCur() {
 }
 
 // ============ TOAST ============
-function showToast(msg, type) {
+function showToast(msg, type, ms=2500) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = `toast ${type==='ok'?'toast-ok':'toast-err'} show`;
   clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.classList.remove('show'); t.classList.add('hide'); }, 2500);
+  t._timer = setTimeout(()=>{ t.classList.remove('show'); t.classList.add('hide'); }, ms);
 }
 
 // ============ FORMAT ============
