@@ -36,9 +36,10 @@ function eq(name, actual, expect) { return check(name + ` = ${JSON.stringify(exp
 const row = (date, cat, sub, amount, opt = {}) =>
   [date, opt.name || 'Khoa', cat, sub, opt.detail || '', amount, opt.collected === true, opt.collectedDate || ''];
 
-function makeBackend(rows, cfg = []) {
+function makeBackend(rows, cfg = [], cats = []) {
   const sheet = {
     getLastRow: () => rows.length + 1,                     // +1 vì dòng 1 là header
+    appendRow: (v) => { rows.push(v.slice()); },
     getRange: (r, c, nr, nc) => ({
       getValues: () => rows.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)),
       getValue:  () => (r === 1 ? 'tiêu đề' : rows[r - 2][c - 1])   // dòng 1 = header (ensureSetup đọc)
@@ -47,11 +48,14 @@ function makeBackend(rows, cfg = []) {
   // Các tab phụ (tên người, hạng mục, cấu hình) có sẵn nhưng trống → ensureSetup không phải tạo mới
   const emptyTab = { getLastRow: () => 1, getRange: () => ({ getValues: () => [], getValue: () => 'tiêu đề' }) };
   // Tab cau_hinh: cfg = [[khóa, giá trị], ...] (số dư ban đầu, ngày bắt đầu)
+  // Tab hang_muc: cats = [[emoji, tên, loại, từ khóa], ...]
+  const catTab = { getLastRow: () => cats.length + 1,
+                   getRange: (r, c, nr, nc) => ({ getValues: () => cats.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)) }) };
   const cfgTab = { getLastRow: () => cfg.length + 1,
                    getRange: (r, c, nr, nc) => ({ getValues: () => cfg.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)) }) };
   const out = (t) => ({ __text: t, setMimeType: () => out(t) });
   const ctx = vm.createContext({
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : n === 'cau_hinh' ? cfgTab : emptyTab) }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : n === 'cau_hinh' ? cfgTab : n === 'hang_muc' ? catTab : emptyTab) }) },
     ContentService: { createTextOutput: out, MimeType: { JSON: 'application/json' } },
     Utilities:      { formatDate: (d) => d },
     LockService:    { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
@@ -141,7 +145,7 @@ function blocks(html) {
   return { debt: cut(iDebt, iCa, iCm), caNhan: cut(iCa, iCm), choMuon: cut(iCm) };
 }
 function cats(blockHtml) {
-  return blockHtml.split('<div class="stat-cat">').slice(1).map(b => ({
+  return blockHtml.split(/<div class="stat-cat" data-k="(?:ca|cm):[^"]*">/).slice(1).map(b => ({
     name:   (b.match(/class="text-gray-200 text-sm truncate">([^<]*)</) || [])[1],
     count:  Number((b.match(/font-size:11px">·(\d+)</) || [])[1]),
     money:  num((b.match(/flex-shrink-0">([^<]*?)<span class="text-gray-500"/) || [])[1] || '0'),
@@ -603,6 +607,86 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
     s.set('apiUrl', 'https://fake.local/exec');
     app.run('cleanOldCache()');
     eq('14.3 chỉ còn sổ + cấu hình + URL', [...s.keys()].sort(), ['apiUrl', 'ct_book', 'ct_{"action":"getConfig"}']);
+  }
+}
+
+// ============ 15. SỬA KHOẢN CŨ + CẦN XEM LẠI + HỌ TRẢ GIÚP (27/09) ============
+{
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+
+  // (3) Họ trả giúp: dòng của mình mang hạng mục Cá nhân, dòng nợ mang hạng mục Cho mượn
+  {
+    const CATS = [['🍜', 'Tiền ăn', 'Cá nhân', 'ăn, cơm, bún, phở'], ['🍚', 'Cơm nước', 'Cho mượn/ Ứng', 'cơm, ăn, bún, phở'],
+                  ['🏢', 'Cty', 'Cho mượn/ Ứng', 'cty']];
+    const rows = [];
+    const be = makeBackend(rows, [], CATS);
+    const app = makeApp(be);
+    app.run("initMonthTabs(); S.screen='home'; applyConfig(__in)", be({ action: 'getConfig' }));
+    app.run("OWNER='Khoa'");
+    app.run("S.selectedPerson0='Việt'; setDir('i_owe'); setOweMode('fronted')");
+    const chips = app.run('hmList0().map(h => h.name)');
+    check('15.3 chọn người khác + Họ trả giúp → chip là hạng mục CÁ NHÂN', chips.includes('Tiền ăn') && !chips.includes('Cơm nước'), chips);
+    app.run("setOweMode('cash')");
+    check('15.3 đổi sang Vay tiền mặt → chip về nhóm Cho mượn', app.run('hmList0().map(h => h.name)').includes('Cơm nước'));
+    app.run("setDir('them_owe')");
+    check('15.3 Họ nợ mình → chip nhóm Cho mượn', app.run('hmList0().map(h => h.name)').includes('Cơm nước'));
+    eq('15.3 dò chi tiết "bún thập cẩm" trong nhóm Cho mượn → Cơm nước', app.run("(matchHM(HM_CHO_MUON, 'bún thập cẩm') || {}).name"), 'Cơm nước');
+    eq('15.3 dò "bún thập cẩm" trong nhóm Cá nhân → Tiền ăn', app.run("(matchHM(HM_CA_NHAN, 'bún thập cẩm') || {}).name"), 'Tiền ăn');
+
+    // Đi trọn đường ghi: frontend → Code.gs thật → Sheet giả. Fake chip DOM không chọn được chip nên
+    // gắn getHM trả đúng chip mà hmList0 sẽ bật (Tiền ăn) — phần đang thử là 2 dòng ra Sheet.
+    app.run("setDir('i_owe'); setOweMode('fronted'); getHM = () => 'Tiền ăn'; S.kind0='chi'; S.amts[0]='55000'; document.getElementById('dt0').value='bún thập cẩm'");
+    await app.run('submit0()');
+    eq('15.3 addFronted ghi 2 dòng: Khoa/Cá nhân/Tiền ăn + Việt/Cho mượn/Cơm nước',
+       rows.map(r => [r[1], r[2], r[3], r[5]]), [['Khoa', 'Cá nhân', 'Tiền ăn', 55000], ['Việt', 'Cho mượn/ Ứng', 'Cơm nước', -55000]]);
+
+    // Backend: app KHÔNG gửi subDebt (bản app cũ) → backend tự dò bằng từ khóa trong Sheet, không dùng chung
+    const rows2 = [];
+    const be2 = makeBackend(rows2, [], CATS);
+    const res = be2({ action: 'addFronted', person: 'Việt', detail: 'bún', amount: '30000', subcategory: 'Tiền ăn' });
+    eq('15.3 backend: không có subDebt → dòng nợ tự dò ra "Cơm nước" (không dùng lại "Tiền ăn")', [res.success, rows2.map(r => r[3])], [true, ['Tiền ăn', 'Cơm nước']]);
+  }
+
+  // (2) Cần xem lại: đúng 4 loại dấu hiệu, dòng đúng thì không vào danh sách
+  {
+    const app = makeApp(makeBackend([]));
+    const book = [
+      { rowIndex: 9, date: '20/07/2026', name: 'Khoa', category: 'Cá nhân', subcategory: '', detail: 'thiếu', amount: 50000 },
+      { rowIndex: 8, date: '19/07/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Cơm nước', detail: 'sai nhóm', amount: 55000 },
+      { rowIndex: 7, date: '18/07/2026', name: 'Việt', category: 'Cho mượn/ Ứng', subcategory: 'Cơm nước', detail: 'số lạ', amount: -99 },
+      { rowIndex: 6, date: '17/07/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Không xác định', detail: 'kxđ', amount: 20000 },
+      { rowIndex: 5, date: '16/07/2026', name: 'Khoa', category: 'Cá nhân', subcategory: 'Tiền ăn', detail: 'đúng', amount: 40000 },
+      { rowIndex: 4, date: '15/07/2026', name: 'Khoa', category: 'Thu nhập', subcategory: 'Lương', detail: 'lương', amount: 9000000 },
+      { rowIndex: 3, date: '14/07/2026', name: 'A. Hải', category: 'Cho mượn/ Ứng', subcategory: 'Cty', detail: 'đúng 2', amount: 100000 }
+    ];
+    const list = app.run('reviewRows(__in).map(x => [x.r.detail, x.why.join(" · ")])', book);
+    eq('15.2 Cần xem lại: đúng 4 dòng, đúng lý do, mới nhất trước', list, [
+      ['thiếu', 'Thiếu hạng mục'],
+      ['sai nhóm', '"Cơm nước" không thuộc Cá nhân'],
+      ['số lạ', 'Số tiền -99đ'],
+      ['kxđ', 'Không xác định']
+    ]);
+    const html = app.run('reviewHtml(reviewRows(__in))', book);
+    check('15.2 khối có tiêu đề + số dòng', html.includes('Cần xem lại') && html.includes('4 dòng'), html.slice(0, 200));
+    eq('15.2 mỗi dòng bấm được → mở bảng sửa', (html.match(/onclick='openTxDetail\(/g) || []).length, 4);
+    eq('15.2 sổ sạch → không vẽ khối', app.run('reviewHtml(reviewRows(__in))', book.slice(4)), '');
+    // bấm vào dòng → openTxDetail nhận đúng dòng (có rowIndex để sửa)
+    const payload = html.match(/onclick='openTxDetail\(([^']*)\)'/)[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    eq('15.2 dữ liệu mở bảng sửa đúng dòng', JSON.parse(payload).rowIndex, 9);
+  }
+
+  // (1) Khoản trong Thống kê (kể cả tháng cũ) bấm được → mở bảng sửa đúng dòng
+  {
+    const be = makeBackend([row('03/07/2026', 'Cá nhân', 'Tiền ăn', 30000, { detail: 'phở tháng 7' }), row(today, 'Cá nhân', 'Tiền ăn', 1000)]);
+    const app = makeApp(be);
+    const html = await app.loadStats('2026', '07');
+    const m = html.match(/<div class="stat-detail-row"[^>]*onclick='openTxDetail\(([^']*)\)'>/);
+    check('15.1 khoản tháng 7 trong Thống kê có nút mở bảng sửa', !!m);
+    if (m) {
+      const r = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
+      eq('15.1 mở đúng dòng tháng 7 (có số dòng Sheet để sửa)', [r.detail, r.rowIndex], ['phở tháng 7', 2]);
+    }
   }
 }
 

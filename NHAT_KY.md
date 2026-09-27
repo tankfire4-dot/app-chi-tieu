@@ -12,6 +12,36 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-09-27 (chiều) — Sửa khoản cũ ngay trong app + "Cần xem lại" + Họ trả giúp đúng hạng mục
+
+**Vấn đề (Khoa nêu):** (a) chi "Tiền ăn" hay bị thành "Cơm nước", phải sửa tay; (b) khoản ở tháng xa
+(vd tháng 7) sai tiền/thiếu thông tin thì không sửa được trong app — Trang chủ chỉ có tháng này, khoản
+trong Thống kê bấm không mở gì — nên phải vào Google Sheet lọc tay.
+
+**Soát (sổ thật, chỉ đọc):** (a) chỉ xảy ra ở "Bạn nợ họ → Họ trả giúp": tên người khác nên app hiện
+chip nhóm Cho mượn, rồi `addFronted` ghi CẢ 2 dòng chung 1 hạng mục → dòng chi cá nhân mang "Cơm nước".
+Sổ thật còn 2 dòng như vậy (cả 2 có cặp dòng nợ đúng dấu hiệu). Tổng ~12 dòng đáng nghi: 1 thiếu hạng
+mục, 2 sai nhóm, 2 dòng 99đ, 7 "Không xác định".
+
+**Quyết định (Khoa duyệt cả 3):**
+
+1. Khoản trong Thống kê (mọi tháng/năm) bấm được → cùng bảng chi tiết/sửa như Trang chủ (có chốt
+   verify tên + số tiền). Vẽ lại sau khi sửa giữ nguyên các hạng mục đang mở (`data-k`).
+2. Khối **"Cần xem lại"** đầu màn Thống kê, thu gọn mặc định, quét CẢ SỔ: thiếu hạng mục, hạng mục
+   không thuộc nhóm của dòng, |số tiền| < 1.000đ, "Không xác định". Chỉ chạy khi đã có cấu hình thật.
+   Tối đa 30 dòng hiện một lúc.
+3. `hmList0()` = một chỗ quyết định chip tab Ghi; "Họ trả giúp" dùng nhóm Cá nhân. Dòng nợ lấy
+   `subDebt` (app dò trong nhóm Cho mượn); Code.gs `addFronted` nhận `subDebt`, thiếu thì tự
+   `autoHM(detail, "Cho mượn/ Ứng")` — **cần dán lại Code.gs**. Bump `v62`.
+
+**Bằng chứng:** `tests/stats.test.mjs` **108/108** (mục 15: chip, 2 dòng ra Sheet qua Code.gs thật,
+backend thiếu subDebt, 4 loại dấu hiệu, bấm khoản tháng 7 → đúng dòng). Gỡ từng phần → đỏ đúng mục
+(riêng "app không gửi subDebt" vẫn xanh vì backend tự dò ra cùng kết quả — hai lớp đỡ nhau).
+`tests/stats.browser.js` 30/30. Chromium bấm thật: khối Cần xem lại → mở hạng mục → bấm khoản tháng 7
+→ Sửa → bảng sửa đúng số tiền/hạng mục; vẽ lại vẫn giữ mục đang mở; không lỗi trang.
+
+---
+
 ## 2026-09-27 — Soát tăng trưởng (4–5 dòng/ngày trong nhiều năm) + sửa 3 lỗi
 
 **Soát:** nhịp thật ~150 dòng/tháng (~1.800/năm). Dựng sổ giả 1/3/5/10 năm chạy app thật trên

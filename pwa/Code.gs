@@ -567,11 +567,15 @@ function doGet(e) {
         var sub    = p.subcategory || "";
         if (!person || person === owner) return err("Tên người không hợp lệ");
         if (!amount) return err("Thiếu số tiền");
+        // Hai dòng thuộc HAI NHÓM hạng mục khác nhau: dòng của mình là Cá nhân (vd "Tiền ăn"), dòng nợ
+        // là Cho mượn/ Ứng (vd "Cơm nước"). Trước 27/09 dùng chung 1 hạng mục → chi cá nhân dính "Cơm
+        // nước" (Khoa phải sửa tay). Dòng nợ: lấy subDebt app gửi, không có thì dò từ khóa như addPaidBy.
+        var subDebt = p.subDebt || autoHM(detail, "Cho mượn/ Ứng");
 
         var sheet    = getSheet();
         var firstRow = sheet.getLastRow() + 1;
-        sheet.appendRow([today(), owner,  "Cá nhân",       sub, detail,  amount, true]);
-        sheet.appendRow([today(), person, "Cho mượn/ Ứng", sub, detail, -amount, false]);
+        sheet.appendRow([today(), owner,  "Cá nhân",       sub,     detail,  amount, true]);
+        sheet.appendRow([today(), person, "Cho mượn/ Ứng", subDebt, detail, -amount, false]);
 
         return ok({ firstRow: firstRow, rowsAdded: 2 });
       }

@@ -1118,6 +1118,51 @@ function loadStats() {
   });
 }
 
+// ============ CẦN XEM LẠI ============
+// Khoa từng phải vào Google Sheet lọc tay các dòng thiếu/sai (27/09). App tự liệt kê trên CẢ SỔ
+// (không theo kỳ đang xem) các dòng: thiếu hạng mục, hạng mục không thuộc nhóm của dòng, số tiền
+// dưới 1.000đ (gõ thiếu số 0), "Không xác định". Sửa xong dòng tự rơi khỏi danh sách.
+// Chỉ chạy khi đã có cấu hình thật (S.cfg): trước đó danh sách hạng mục là bản mẫu → báo nhầm.
+function reviewRows(rows) {
+  const nhom = { 'Cá nhân': HM_CA_NHAN, 'Cho mượn/ Ứng': HM_CHO_MUON, 'Thu nhập': HM_THU };
+  const names = {};
+  Object.keys(nhom).forEach(k => { names[k] = new Set(nhom[k].map(h => h.name)); });
+  const out = [];
+  rows.forEach(r => {
+    const why = [];
+    if (!r.subcategory) why.push('Thiếu hạng mục');
+    else if (r.subcategory === 'Không xác định') why.push('Không xác định');
+    else if (names[r.category] && !names[r.category].has(r.subcategory)) why.push('"' + r.subcategory + '" không thuộc ' + r.category);
+    if (Math.abs(r.amount) < 1000) why.push('Số tiền ' + (r.amount < 0 ? '-' : '') + fmt(r.amount) + 'đ');
+    if (why.length) out.push({ r, why });
+  });
+  return out;   // sổ xếp mới nhất trước → danh sách cũng vậy
+}
+
+function reviewHtml(list) {
+  if (!list.length) return '';
+  const MAX = 30;
+  let h = `<div class="glass rounded-2xl p-5 mb-4"><div class="stat-cat" data-k="review">
+    <div class="stat-cat-head" onclick="this.parentElement.classList.toggle('open')" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="display:flex;align-items:center;gap:6px"><span class="stat-caret">▾</span><span class="text-white font-semibold">Cần xem lại</span></span>
+      <span style="color:#f59e0b;font-weight:700;font-size:13px">${list.length} dòng</span>
+    </div>
+    <p class="text-gray-500 text-xs" style="margin-top:4px">Thiếu hạng mục, sai nhóm, số tiền lạ — bấm để sửa</p>
+    <div class="stat-detail" style="margin-left:0;padding-left:0;border-left:none">`;
+  list.slice(0, MAX).forEach(({ r, why }) => {
+    h += `<div class="stat-detail-row" style="cursor:pointer" onclick='openTxDetail(${esc(JSON.stringify(r))})'>
+        <div class="flex-1 min-w-0">
+          <p class="text-gray-300 text-xs truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
+          <p style="font-size:10px;color:#f59e0b">${esc(why.join(' · '))}</p>
+          <p class="text-gray-600" style="font-size:10px">${r.date} · ${esc(r.name)} · ${esc(r.category)}</p>
+        </div>
+        <span style="color:#d1d5db;font-weight:700;font-size:12px;flex-shrink:0">${r.amount < 0 ? '−' : ''}${fmt(r.amount)}</span>
+      </div>`;
+  });
+  if (list.length > MAX) h += `<p class="text-gray-500 text-xs" style="padding-top:8px">+${list.length - MAX} dòng nữa — sửa bớt rồi sẽ hiện tiếp</p>`;
+  return h + '</div></div></div>';
+}
+
 // HỢP ĐỒNG PHẠM VI: "Tất cả năm" (year rỗng) = toàn bộ sổ, KHÔNG đoán năm nay. Tổng, hạng mục và %
 // luôn tính trên CÙNG một tập dòng nên không thể lệch kỳ (bài học 30/08).
 function drawStats() {
@@ -1131,7 +1176,12 @@ function drawStats() {
     if (pm===0) { pm=12; py--; }
     prev = localStats(rows, String(pm).padStart(2,'0'), String(py));
   }
+  const wrap = document.getElementById('stats-content');
+  // Giữ các hạng mục đang mở: sửa 1 khoản xong màn vẽ lại, không bắt bấm mở lại từ đầu
+  const openK = new Set([...wrap.querySelectorAll('.stat-cat.open')].map(el => el.dataset.k));
   renderStats(d, month, year, localDebts(rows).debts, prev, localRows(rows, month, year));
+  if (S.cfg) wrap.insertAdjacentHTML('afterbegin', reviewHtml(reviewRows(rows)));
+  wrap.querySelectorAll('.stat-cat').forEach(el => { if (openK.has(el.dataset.k)) el.classList.add('open'); });
 }
 
 function renderStats(d, month, year, debts, prev, statRows) {
@@ -1322,7 +1372,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const pos = isChoMuon && r.amount > 0;
       const color = pos ? '#2FD49B' : '#FB6B7C';
       const sign  = pos ? '+' : (r.amount < 0 ? '−' : '');
-      h += `<div class="stat-detail-row">
+      h += `<div class="stat-detail-row" style="cursor:pointer" onclick='openTxDetail(${esc(JSON.stringify(r))})'>
         <div class="flex-1 min-w-0">
           <p class="text-gray-300 text-xs truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
           <p class="text-gray-600" style="font-size:10px">${r.date} · ${esc(r.name)}</p>
@@ -1341,7 +1391,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const b = pctOfIncome(amt);
       const emoji = statEmoji(name, HM_CA_NHAN);
       const n = (caRows[name]||[]).length;
-      html += `<div class="stat-cat">
+      html += `<div class="stat-cat" data-k="ca:${esc(name)}">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
         <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-white text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${badgeHtml(b.label)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-indigo-500" style="width:${b.width}%"></div></div></div></div>
@@ -1358,7 +1408,7 @@ function renderStats(d, month, year, debts, prev, statRows) {
       const b = pctOfIncome(amt);
       const emoji = statEmoji(name, HM_CHO_MUON);
       const n = (cmRows[name]||[]).length;
-      html += `<div class="stat-cat">
+      html += `<div class="stat-cat" data-k="cm:${esc(name)}">
         <div class="flex items-center gap-3 stat-cat-head" onclick="this.parentElement.classList.toggle('open')"><div class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">${emoji}</div>
         <div class="flex-1 min-w-0"><div class="flex justify-between mb-1"><span class="flex items-center gap-1 min-w-0"><span class="stat-caret">▾</span><span class="text-gray-200 text-sm truncate">${esc(name)}</span><span class="text-gray-600 font-normal flex-shrink-0" style="font-size:11px">·${n}</span></span><span class="text-emerald-400 text-sm font-bold ml-2 flex-shrink-0">${fmt(amt)}${badgeHtml(b.label)}</span></div>
         <div class="prog-bg"><div class="prog-fill bg-emerald-600" style="width:${b.width}%"></div></div></div></div>
@@ -1453,6 +1503,27 @@ function initPeopleChips() {
   pc1.innerHTML = PEOPLE.map(p => `<span class="chip ${p===OWNER?'chip-on':'chip-off'}" ${p===OWNER?'style="opacity:.6;pointer-events:none"':''} data-name="${esc(p)}" onclick="toggleSplit(this)">${esc(p)}</span>`).join('');
 }
 
+// Danh sách chip hạng mục của tab Ghi — MỘT chỗ quyết định cho mọi đường (chọn người, đổi chiều nợ,
+// gõ chi tiết, reset). "Họ trả giúp" là khoản CHÍNH MÌNH tiêu nên dùng hạng mục Cá nhân dù đang chọn
+// tên người khác (trước 27/09 hiện nhóm Cho mượn → chi cá nhân bị ghi "Cơm nước").
+function hmList0() {
+  if (S.kind0 === 'thu') return HM_THU;
+  if (S.selectedPerson0 === OWNER) return HM_CA_NHAN;
+  return (S.dir0 === 'i_owe' && S.oweMode0 === 'fronted') ? HM_CA_NHAN : HM_CHO_MUON;
+}
+function refreshHM0() { renderHM('hm0', hmList0()); autoHM(0); }
+
+// Hạng mục đầu tiên trong `list` khớp từ khóa (hoặc tên) với chữ đã gõ — dùng cho chip và cho dòng nợ.
+function matchHM(list, raw) {
+  const text = (raw || '').toLowerCase().normalize('NFC');
+  if (!text) return null;
+  return list.find(h => {
+    if (h.keywords) return h.keywords.split(',').some(k => k.trim() && text.includes(k.trim()));
+    const n = h.name.toLowerCase().normalize('NFC');
+    return n.includes(text) || text.includes(n);
+  }) || null;
+}
+
 function selectPerson0(el) {
   const name = el.dataset.name;
   document.querySelectorAll('#pc0 .chip').forEach(c=>{c.classList.remove('chip-on');c.classList.add('chip-off');});
@@ -1467,11 +1538,11 @@ function selectPerson0(el) {
   if(isKhoa) {
     badge.textContent='Cá nhân'; badge.style='background:rgba(99,102,241,0.2);color:#a5b4fc';
     hint.textContent='→ Đã thu tự động ✓'; hint.className='text-gray-600 text-xs';
-    renderHM('hm0', HM_CA_NHAN);
+    refreshHM0();
   } else {
     badge.textContent='Cho mượn/ Ứng'; badge.style='background:rgba(16,185,129,0.18);color:#6ee7b7';
     hint.textContent='→ Đã thu cần tick tay sau'; hint.className='text-amber-600 text-xs';
-    renderHM('hm0', HM_CHO_MUON);
+    refreshHM0();
   }
 }
 
@@ -1485,6 +1556,7 @@ function setDir(dir) {
   // Sub-toggle "trả giúp / vay tiền mặt" chỉ hiện khi Bạn nợ họ
   document.getElementById('owe-mode0').classList.toggle('hidden', !isI);
   if(isI) setOweMode(S.oweMode0);
+  else refreshHM0();
 }
 
 function setOweMode(mode) {
@@ -1497,6 +1569,7 @@ function setOweMode(mode) {
   document.getElementById('owe-mode-hint').textContent = isCash
     ? '→ Bạn cầm tiền mặt về: số dư tăng, không tính là chi tiêu'
     : '→ Họ trả hộ khoản bạn dùng: tính là chi tiêu, số dư không đổi';
+  refreshHM0();
 }
 
 function toggleSplit(el) {
@@ -1526,20 +1599,13 @@ function selectHM(el, id) {
 
 
 function autoHM(tabIdx) {
-  const text = (document.getElementById('dt'+tabIdx).value || '').toLowerCase().normalize('NFC');
+  const text = (document.getElementById('dt'+tabIdx).value || '');
   const hmId = 'hm'+tabIdx;
   if (!text) {
     document.querySelectorAll('#'+hmId+' .chip').forEach(c=>{c.classList.remove('chip-on');c.classList.add('chip-off');});
     return;
   }
-  const list = tabIdx===0
-    ? (S.kind0==='thu' ? HM_THU : S.selectedPerson0===OWNER ? HM_CA_NHAN : HM_CHO_MUON)
-    : HM_CA_NHAN;
-  const matched = list.find(h => {
-    if (h.keywords) return h.keywords.split(',').some(k => k.trim() && text.includes(k.trim()));
-    const n = h.name.toLowerCase().normalize('NFC');
-    return n.includes(text) || text.includes(n);
-  });
+  const matched = matchHM(tabIdx===0 ? hmList0() : HM_CA_NHAN, text);
   document.querySelectorAll('#'+hmId+' .chip').forEach(c => {
     const on = !!matched && c.dataset.name === matched.name;
     c.classList.toggle('chip-on', on); c.classList.toggle('chip-off', !on);
@@ -1573,8 +1639,7 @@ function setKind(kind) {
   if (isThu) { document.getElementById('dir-toggle0').classList.add('hidden'); document.getElementById('owe-mode0').classList.add('hidden'); }
   document.getElementById('btn0').textContent = isThu ? 'Ghi thu nhập' : 'Ghi lại';
   document.getElementById('dt0').placeholder = isThu ? 'Lương tháng 6, thưởng dự án...' : 'Mô tả chi tiết...';
-  if (isThu) renderHM('hm0', HM_THU);
-  else renderHM('hm0', S.selectedPerson0===OWNER ? HM_CA_NHAN : HM_CHO_MUON);
+  renderHM('hm0', hmList0());
 }
 
 // ============ LƯU NỀN ============
@@ -1623,6 +1688,8 @@ function submit0() {
   const isIOwe = !isThu && S.dir0==='i_owe';
   const fronted = isIOwe && S.oweMode0==='fronted';
   let work, preview, okMsg;
+  // Dòng nợ của người kia thuộc nhóm Cho mượn → dò riêng theo chi tiết (vd "bún" → "Cơm nước")
+  const subDebt = fronted ? ((matchHM(HM_CHO_MUON, detail) || {}).name || '') : '';
   if (fronted) {
     // Họ trả giúp → 2 dòng (mình chi + mình nợ họ). Ghi bằng 1 lệnh atomic addFronted để KHÔNG
     // bao giờ nửa vời. Backend cũ chưa có addFronted → fallback 2 lệnh rời (giữ tương thích).
@@ -1630,13 +1697,13 @@ function submit0() {
     okMsg = 'Đã ghi — chi của bạn + bạn nợ họ ✓';
     work = async () => {
       try {
-        const res = await api({ action:'addFronted', person, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
+        const res = await api({ action:'addFronted', person, detail:detail||'Chi tiêu', amount:amt, subcategory:sub, subDebt });
         S.lastRowIndex = res.firstRow; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };   // dòng đầu block = mình chi (Code.gs addFronted)
       } catch(eF) {
         if (!/Unknown action/i.test(eF.message)) throw eF;   // lỗi thật (vd 404) → không fallback, tránh ghi trùng
         const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
-        await api({ action:'addRow', name:person, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:sub });
+        await api({ action:'addRow', name:person, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:subDebt });
         S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };
       }
@@ -1690,7 +1757,7 @@ function resetTab(tab) {
   document.getElementById('d'+tab).textContent='0';
   if(tab===0) { S.calcPrev0=0; S.calcOp0=''; document.getElementById('d0f').textContent=''; S.dir0='them_owe'; S.oweMode0='fronted'; document.getElementById('dir-toggle0').classList.add('hidden'); document.getElementById('owe-mode0').classList.add('hidden'); setKind('chi'); }
   const inp = document.getElementById('dt'+tab); if(inp) inp.value='';
-  renderHM('hm'+tab, tab===0 ? (S.selectedPerson0===OWNER ? HM_CA_NHAN : HM_CHO_MUON) : HM_CA_NHAN);
+  renderHM('hm'+tab, tab===0 ? hmList0() : HM_CA_NHAN);
 }
 
 async function doUndo() {
