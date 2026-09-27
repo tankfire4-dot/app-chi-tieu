@@ -88,7 +88,9 @@ function makeApp(backend) {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v)),
     removeItem: (k) => store.delete(k),
-    clear: () => store.clear()
+    clear: () => store.clear(),
+    get length() { return store.size; },
+    key: (i) => [...store.keys()][i] ?? null
   };
   const net = { offline: false, calls: [] };
   const ctx = vm.createContext({
@@ -527,6 +529,81 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
   check('13. lượt cũ về muộn KHÔNG đè: sổ vẫn có khoản "mới ghi"',
         app.run('S.book.rows.some(r => r.detail === "mới ghi")') && app.els.get('tx-list').innerHTML.includes('mới ghi'),
         app.run('S.book.rows.map(r => r.detail)'));
+}
+
+// ============ 14. SOÁT TĂNG TRƯỞNG 27/09: 3 LỖI ĐÃ SỬA ============
+{
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+
+  // (1) App mở từ tháng trước, chạy nền qua ngày mùng 1 → khoản ghi hôm nay vẫn phải hiện ở Trang chủ
+  {
+    const be = makeBackend([row(today, 'Cá nhân', 'Tiền ăn', 25000, { detail: 'phở mùng 1' })]);
+    const app = makeApp(be);
+    app.run('S.screen = "home"; S.curMonth = ((new Date().getMonth() + 11) % 12) + 1; S.curYear = new Date().getFullYear() - (new Date().getMonth() === 0 ? 1 : 0)');
+    await app.run('loadHome()');
+    check('14.1 app kẹt tháng trước → khoản hôm nay VẪN hiện ở Trang chủ', app.els.get('tx-list').innerHTML.includes('phở mùng 1'),
+          app.els.get('tx-list').innerHTML.slice(0, 120));
+    app.run('S.curMonth = ((new Date().getMonth() + 11) % 12) + 1');
+    app.run("S.pending = [{ date: todayVN(), pending: true, name: 'Khoa', category: 'Cá nhân', detail: 'trà sữa', amount: 30000 }]; renderRows()");
+    check('14.1 dòng "Đang lưu" của khoản hôm nay cũng hiện dù app đang giữ tháng cũ', app.els.get('tx-list').innerHTML.includes('trà sữa'));
+  }
+
+  // (2) Lưu xong nhưng đồng bộ còn treo (Google chậm) → dòng phải ghi "Đã lưu", không còn "Đang lưu"
+  {
+    const rows = [];
+    const be = makeBackend(rows);
+    let thaDongBo = null, dongBoLoi = false, daThaLoi = false, giuDongBo = true;
+    const app = makeApp(be);
+    app.ctx.fetch = async (u) => {
+      const url = new URL(u); const params = {}; url.searchParams.forEach((v, k) => (params[k] = v));
+      app.net.calls.push(params);
+      let json;
+      if (params.action === 'addRow') {
+        rows.push(row(today, 'Cá nhân', '', Number(params.amount), { detail: params.detail }));
+        json = { success: true, rowIndex: rows.length + 1 };
+      } else if (params.action === 'getRows' && params.scope === 'all' && giuDongBo && app.run('S.pending.length') > 0) {
+        if (dongBoLoi && daThaLoi) throw new Error('Google 404');   // app tự thử lại → hỏng ngay, không treo
+        await new Promise(r => { thaDongBo = r; });   // đồng bộ sau khi ghi: treo tới khi test thả
+        if (dongBoLoi) { daThaLoi = true; throw new Error('Google 404'); }
+        json = be(params);
+      } else json = be(params);
+      return { ok: true, status: 200, json: async () => json };
+    };
+    const list = () => app.els.get('tx-list').innerHTML;
+    app.run("initMonthTabs(); OWNER='Khoa'; S.screen='home'; S.selectedPerson0='Khoa'; S.kind0='chi'; S.amts[0]='45000'; document.getElementById('dt0').value='bún chả'");
+    const done = app.run('submit0()');
+    for (let i = 0; i < 5 && !thaDongBo; i++) await new Promise(r => setTimeout(r, 0));
+    check('14.2 Sheet đã nhận, đồng bộ còn treo → dòng ghi "Đã lưu"', list().includes('bún chả') && list().includes('Đã lưu') && !list().includes('Đang lưu'),
+          list().slice(0, 300));
+    thaDongBo(); await done;
+    eq('14.2 đồng bộ xong → khoản hiện đúng 1 lần (dòng tạm đã gỡ)', (list().match(/>bún chả</g) || []).length, 1);
+    check('14.2 đồng bộ xong → hết nhãn "Đã lưu · đang đồng bộ"', !list().includes('đang đồng bộ'));
+
+    // Đồng bộ HỎNG sau khi lưu thành công → khoản vẫn nằm trên màn, không biến mất như chưa ghi
+    dongBoLoi = true; thaDongBo = null;
+    app.run("S.selectedPerson0='Khoa'; S.amts[0]='15000'; document.getElementById('dt0').value='nước mía'");
+    const done2 = app.run('submit0()');
+    for (let i = 0; i < 5 && !thaDongBo; i++) await new Promise(r => setTimeout(r, 0));
+    thaDongBo(); await done2;
+    check('14.2 lưu được mà đồng bộ hỏng → khoản vẫn hiện "Đã lưu"', list().includes('nước mía') && list().includes('Đã lưu'), list().slice(0, 300));
+    dongBoLoi = false; giuDongBo = false;
+    await app.run('syncBook(true)');
+    eq('14.2 lượt đồng bộ sau thành công → khoản thật thay dòng tạm, không trùng', (list().match(/>nước mía</g) || []).length, 1);
+  }
+
+  // (3) Rác bộ nhớ v58/v59 bị dọn, sổ + cache cấu hình giữ nguyên
+  {
+    const app = makeApp(makeBackend([]));
+    const s = app.store;
+    s.set('ct_book', '{"rows":[],"at":1}');
+    s.set('ct_{"action":"getConfig"}', '{"data":{},"exp":9e15}');
+    s.set('ct_{"action":"getRows","scope":"all"}', 'x'.repeat(140000));
+    s.set('ct_{"action":"getStatsBundle","month":"08","year":"2026"}', 'y');
+    s.set('apiUrl', 'https://fake.local/exec');
+    app.run('cleanOldCache()');
+    eq('14.3 chỉ còn sổ + cấu hình + URL', [...s.keys()].sort(), ['apiUrl', 'ct_book', 'ct_{"action":"getConfig"}']);
+  }
 }
 
 // ============ KẾT ============

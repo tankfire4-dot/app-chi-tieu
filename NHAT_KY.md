@@ -12,6 +12,31 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-09-27 — Soát tăng trưởng (4–5 dòng/ngày trong nhiều năm) + sửa 3 lỗi
+
+**Soát:** nhịp thật ~150 dòng/tháng (~1.800/năm). Dựng sổ giả 1/3/5/10 năm chạy app thật trên
+Chromium (`scratch` sieu-tai.js, đã xóa sau phiên): 10 năm = 18.265 dòng → Trang chủ/Công nợ/Thống kê
+tháng < 0,01s, "Tất cả năm" 0,22s (điện thoại ước ~1s). Sổ trên máy 3,7 triệu ký tự; trần localStorage
+Chromium đo được ~5,2 triệu ký tự → **đầy sau ~14 năm** (đầy thì app vẫn đúng, chỉ mất lợi thế mở nhanh —
+lúc đó đổi sang IndexedDB hoặc nén định dạng). Mạng: Google gzip, cả sổ ~11KB/lần đồng bộ.
+
+**Sửa (Khoa giao "sửa cả 3"):**
+
+1. **Kẹt tháng khi app chạy nền qua ngày mùng 1:** `S.curMonth` chỉ đặt lúc mở app → ghi ngày mùng 1
+   không hiện ở Trang chủ (kể cả dòng "Đang lưu"). `drawHome`/`renderRows` luôn lấy tháng hiện tại;
+   mở lại từ nền thì vẽ lại ngay.
+2. **"Đang lưu…" còn sau khi Sheet đã nhận** (Google chậm 32–43s ngày 27/09): lưu xong dòng đổi thành
+   "✓ Đã lưu · đang đồng bộ", ở lại tới khi một lượt đồng bộ BẮT ĐẦU SAU lúc lưu mang bản thật về
+   (`savedSeq`); đồng bộ hỏng thì dòng vẫn ở đó chứ không biến mất như chưa ghi.
+3. **Rác bộ nhớ v58/v59** (cache lệnh lẻ, có bản ~140KB, không ai xóa): `cleanOldCache()` lúc mở app,
+   chỉ giữ sổ + cache cấu hình. Liệt kê khóa bằng `length/key(i)` chuẩn.
+
+Bump `v61`. **Bằng chứng:** `tests/stats.test.mjs` **94/94** (mục 14 tái hiện đúng 3 lỗi; gỡ từng bản
+sửa → đỏ đúng mục). `tests/stats.browser.js` 30/30. Chromium: rác 140KB bị dọn khi mở app, nhãn
+"Đã lưu" hiện khi đồng bộ còn treo.
+
+---
+
 ## 2026-09-25 (tối) — Sổ trên máy (local-first): vẽ ngay, hỏi Google sau
 
 **Vấn đề:** v59 đã deploy, đo lại thật: Trang chủ 4–5s, Thống kê 3,5–4,5s lúc Google "ấm"; lúc nguội

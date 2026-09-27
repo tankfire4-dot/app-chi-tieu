@@ -648,7 +648,19 @@ function doLogout(btn) {
   location.reload();
 }
 
+// Bản v58/v59 lưu tạm từng lệnh (getRows, getStats, getHome…) với khóa ct_…; v60 thôi dùng nhưng
+// không ai xóa, có bản ~140KB → chiếm chỗ của sổ trên máy. Chỉ giữ sổ + cache cấu hình.
+function cleanOldCache() {
+  try {
+    const keep = k => k === BOOK_KEY || k === cacheKey({action:'getConfig'});
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    keys.filter(k => k && k.indexOf('ct_') === 0 && !keep(k)).forEach(k => localStorage.removeItem(k));
+  } catch(e) {}
+}
+
 async function enterApp() {
+  cleanOldCache();
   S.book = bookLoad();   // có sổ từ lần trước → mọi màn vẽ ngay, không đợi Google
   hideSplash();
   document.getElementById('s-setup').classList.add('hidden');
@@ -744,6 +756,8 @@ function syncBook(force) {
     if (d.scope !== 'all') throw new Error('Backend chưa hỗ trợ đọc toàn bộ sổ — cập nhật Code.gs');
     if (seq !== _syncSeq) return S.book;   // đã có lượt mới hơn → bỏ kết quả cũ
     S.book = { rows: d.rows || [], at: Date.now() };
+    // Khoản "Đã lưu" chắc chắn đã nằm trong bản này nếu lượt đồng bộ bắt đầu SAU lúc lưu → bỏ dòng tạm
+    S.pending = S.pending.filter(x => !(x.saved && seq > x.savedSeq));
     S.syncErr = '';
     bookSave(S.book);
     redrawCurrent();
@@ -837,6 +851,7 @@ function bookDeleteRows(rowIndex, count) {
 
 // ============ LOAD HOME ============
 function drawHome() {
+  initMonthTabs();   // app mở qua đêm cuối tháng → phải nhảy sang tháng mới, không kẹt tháng lúc mở app
   const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
   S.rows = localRows(S.book.rows, m, y); renderRows();
   if (S.cfg) renderBalance(localBalance(S.book.rows, S.cfg));
@@ -912,6 +927,7 @@ function recCalc() {
 
 
 function renderRows() {
+  initMonthTabs();   // (như drawHome) — khoản ghi ngày mùng 1 phải hiện dù app mở từ tháng trước
   const m = String(S.curMonth).padStart(2,'0'), y = String(S.curYear);
   // Khoản đang lưu nền (S.pending) hiện trên cùng, mờ, không bấm được — chưa có số dòng trên Sheet.
   const filtered = [...S.pending, ...S.rows].filter(r => r.date && r.date.slice(3,5)===m && r.date.slice(6,10)===y);
@@ -942,13 +958,13 @@ function renderRows() {
       const collIcon = (r.category==='Cho mượn/ Ứng' && !r.collected && r.amount>0)
         ? '<span style="color:#f59e0b;font-size:12px;margin-left:4px;">●</span>' : '';
       html += r.pending
-        ? `<div class="tx-row" style="opacity:0.55;cursor:default">`
+        ? `<div class="tx-row" style="opacity:${r.saved ? '0.85' : '0.55'};cursor:default">`
         : `<div class="tx-row" onclick='openTxDetail(${esc(JSON.stringify(r))})'>`;
       html += `
         <div style="width:42px;height:42px;border-radius:13px;background:rgba(109,74,255,0.16);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:21px;">${emoji}</div>
         <div class="flex-1 min-w-0">
           <p class="text-white text-sm font-semibold truncate">${esc(fmtDetail(r.detail))||'(trống)'}</p>
-          <p class="text-gray-500 text-xs">${r.pending ? '<span class="spin">⟳</span> Đang lưu…' : `${esc(r.name)}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${esc(r.subcategory||r.category)}</span>`}</p>
+          <p class="text-gray-500 text-xs">${r.pending ? (r.saved ? '<span style="color:#2FD49B">✓ Đã lưu</span> · đang đồng bộ' : '<span class="spin">⟳</span> Đang lưu…') : `${esc(r.name)}${collIcon} · <span style="color:${isIncome?'#2FD49B':'#A48BFF'}">${esc(r.subcategory||r.category)}</span>`}</p>
         </div>
         <p style="color:${amtColor};font-weight:700;font-size:14px;flex-shrink:0;">${amtSign}${fmt(Math.abs(r.amount))}</p>
       </div>`;
@@ -1576,13 +1592,17 @@ function saveInBackground(preview, work, okMsg) {
   renderRows();
   showToast('Đang lưu…','ok');
   return work().then(() => {
+    // Sheet đã nhận → dòng đổi sang "Đã lưu" NGAY (Google chậm thì đồng bộ có thể mất 30–40s, đo 27/09).
+    // Dòng tạm ở lại tới khi một lượt đồng bộ BẮT ĐẦU SAU lúc lưu mang bản thật về (xem syncBook);
+    // đồng bộ hỏng thì nó cứ ở đó, không biến mất khỏi màn như chưa từng ghi.
+    tmp.saved = true; tmp.savedSeq = _syncSeq;
     showToast(okMsg,'ok');
-  }).catch(e => {
-    showToast('Lỗi khi lưu "'+fmtDetail(preview.detail)+'" '+fmt(preview.amount)+'đ: '+e.message+' — xem danh sách, chưa có thì ghi lại','err',7000);
-  }).then(() => syncBook(true).catch(() => {})).then(() => {
+    renderRows();
+  }, e => {
     S.pending = S.pending.filter(x => x !== tmp);
-    redrawCurrent();
-  });
+    renderRows();
+    showToast('Lỗi khi lưu "'+fmtDetail(preview.detail)+'" '+fmt(preview.amount)+'đ: '+e.message+' — xem danh sách, chưa có thì ghi lại','err',7000);
+  }).then(() => syncBook(true).catch(() => {}));
 }
 
 function submit0() {
@@ -1987,7 +2007,7 @@ function hideSplash() {
 // ============ INIT ============
 // Mở lại app từ nền (không tải lại trang) → hỏi Google xem có gì mới
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && S.url && S.book) syncBook().catch(()=>{});
+  if (document.visibilityState === 'visible' && S.url && S.book) { redrawCurrent(); syncBook().catch(()=>{}); }
 });
 
 const savedUrl = localStorage.getItem('apiUrl');
