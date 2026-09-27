@@ -1180,7 +1180,8 @@ function drawStats() {
   // Giữ các hạng mục đang mở: sửa 1 khoản xong màn vẽ lại, không bắt bấm mở lại từ đầu
   const openK = new Set([...wrap.querySelectorAll('.stat-cat.open')].map(el => el.dataset.k));
   renderStats(d, month, year, localDebts(rows).debts, prev, localRows(rows, month, year));
-  if (S.cfg) wrap.insertAdjacentHTML('afterbegin', reviewHtml(reviewRows(rows)));
+  // Cuối màn (Khoa chốt 27/09): số liệu kỳ đang xem là chính, danh sách dọn sổ là việc phụ
+  if (S.cfg) wrap.insertAdjacentHTML('beforeend', reviewHtml(reviewRows(rows)));
   wrap.querySelectorAll('.stat-cat').forEach(el => { if (openK.has(el.dataset.k)) el.classList.add('open'); });
 }
 
