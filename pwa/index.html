@@ -583,17 +583,35 @@ function cacheSet(params, data) {
 // (idempotent, an toàn). Lệnh GHI KHÔNG tự thử lại — tránh ghi trùng (lệnh có thể đã vào Sheet dù
 // phản hồi lỗi). Muốn cho phép thử lại thủ công thì truyền {retry:n}.
 const READ_ACTIONS = new Set(['getConfig','getRows','getBalance','getStats','getDebts','getPeople','getHome','getStatsBundle']);
+// Hạn chờ mỗi lần gọi Google (29/09). Không có hạn thì một lượt treo giữ "đang đồng bộ…" mãi — mọi màn
+// bám chung lượt đó tới khi tắt hẳn app. ĐỌC: 30s rồi thử lại (Google nguội đo 23–42s/lệnh 25/09; lượt
+// bị bỏ vẫn đánh thức Google nên lượt sau thường ~3s). GHI: 90s (trên mức nguội tệ nhất đo được ~80s),
+// vẫn KHÔNG tự thử lại — hết hạn chỉ báo lỗi, vì lệnh có thể đã vào Sheet.
+const READ_TIMEOUT_MS = 30000, WRITE_TIMEOUT_MS = 90000;
+function fetchJson(url, ms) {
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer;
+  const hetHan = new Promise((_, reject) => { timer = setTimeout(() => {
+    if (ctl) ctl.abort();
+    reject(new Error('Google không trả lời sau ' + Math.round(ms/1000) + 's'));
+  }, ms); });
+  const goi = (async () => {
+    const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  })();
+  return Promise.race([goi, hetHan]).finally(() => clearTimeout(timer));
+}
 async function api(params, {useCache=false, retry}={}) {
   if (useCache) { const hit = cacheGet(params); if (hit) return hit; }
   const url = new URL(S.url);
   Object.entries({token:TOKEN,...params}).forEach(([k,v]) => url.searchParams.set(k,v));
-  const attempts = 1 + (retry !== undefined ? retry : (READ_ACTIONS.has(params.action) ? 2 : 0));
+  const isRead = READ_ACTIONS.has(params.action);
+  const attempts = 1 + (retry !== undefined ? retry : (isRead ? 2 : 0));
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const data = await res.json();
+      const data = await fetchJson(url.toString(), isRead ? READ_TIMEOUT_MS : WRITE_TIMEOUT_MS);
       if (!data.success) {
         const e = new Error(data.error || 'Lỗi không xác định');
         // Backend bản cũ chưa có lệnh này → thử lại vô ích (mỗi lần ~3s), trả lỗi ngay để caller lùi về lệnh cũ.
@@ -847,6 +865,41 @@ function bookDeleteRows(rowIndex, count) {
   if (!S.book) return;
   S.book.rows = S.book.rows.filter(r => r.rowIndex < rowIndex || r.rowIndex >= rowIndex + count)
     .map(r => r.rowIndex >= rowIndex + count ? Object.assign({}, r, { rowIndex: r.rowIndex - count }) : r);
+}
+
+// Sau lệnh GHI thành công (29/09): chép luôn các dòng vừa vào Sheet vào sổ trên máy, y như Code.gs
+// appendRow (dòng firstRow, firstRow+1…), để số dư/danh sách đổi NGAY — không đợi lượt tải cả sổ
+// (~3s, lúc Google nguội 30–40s). Hạng mục do Google tự dò có thể lệch chút; lượt đồng bộ ngay sau
+// đó chép đè bằng bản thật. Chưa có sổ trên máy → trả false, gọi nơi dùng dòng tạm "Đã lưu" như cũ.
+function bookAddRows(firstRow, rows) {
+  if (!S.book || !firstRow || !rows || !rows.length) return false;
+  const last = firstRow + rows.length;
+  const added = rows.map((r, i) => Object.assign({ rowIndex: firstRow + i, date: todayVN(), collected: false, collectedDate: '' }, r));
+  // Lượt đồng bộ về trước khi lệnh ghi trả lời có thể đã mang các dòng này → bỏ bản cũ, không trùng.
+  const rest = S.book.rows.filter(r => r.rowIndex < firstRow || r.rowIndex >= last);
+  S.book = { rows: added.reverse().concat(rest), at: S.book.at };   // sổ xếp mới nhất trước
+  bookSave(S.book);
+  return true;
+}
+
+// Sau lệnh sửa (editRow) thành công: sửa luôn dòng trên máy theo đúng luật Code.gs editRow.
+function bookEditRow(rowIndex, p, owner) {
+  if (!S.book) return;
+  S.book.rows = S.book.rows.map(r => {
+    if (r.rowIndex !== rowIndex) return r;
+    const n = Object.assign({}, r);
+    if (p.name !== undefined && p.name !== '' && r.category !== 'Thu nhập') {
+      const isOwner = p.name === owner, wasOwner = r.name === owner;
+      n.name = p.name;
+      n.category = isOwner ? 'Cá nhân' : 'Cho mượn/ Ứng';
+      if (isOwner !== wasOwner) n.collected = isOwner;   // chỉ đổi "Đã thu" khi đổi chủ ↔ người khác
+    }
+    if (p.subcategory !== undefined) n.subcategory = p.subcategory;
+    if (p.detail      !== undefined) n.detail      = p.detail;
+    if (p.amount      !== undefined) n.amount      = parseInt(p.amount);
+    return n;
+  });
+  bookSave(S.book);
 }
 
 // ============ LOAD HOME ============
@@ -1657,18 +1710,35 @@ function saveInBackground(preview, work, okMsg) {
   S.pending.unshift(tmp);
   renderRows();
   showToast('Đang lưu…','ok');
-  return work().then(() => {
-    // Sheet đã nhận → dòng đổi sang "Đã lưu" NGAY (Google chậm thì đồng bộ có thể mất 30–40s, đo 27/09).
-    // Dòng tạm ở lại tới khi một lượt đồng bộ BẮT ĐẦU SAU lúc lưu mang bản thật về (xem syncBook);
-    // đồng bộ hỏng thì nó cứ ở đó, không biến mất khỏi màn như chưa từng ghi.
-    tmp.saved = true; tmp.savedSeq = _syncSeq;
-    showToast(okMsg,'ok');
-    renderRows();
+  // Đồng bộ ép gọi NGAY trong nhịp xử lý kết quả ghi (không qua .then thêm một nhịp): lượt đồng bộ cũ
+  // về giữa hai nhịp sẽ đè sổ vừa thêm dòng bằng bản trước-khi-ghi.
+  return work().then(res => {
+    if (res && bookAddRows(res.firstRow, res.rows)) {
+      // Có sổ trên máy → dòng thật (đúng số dòng Sheet) vào sổ, số dư đổi ngay; bỏ dòng tạm.
+      S.pending = S.pending.filter(x => x !== tmp);
+      showToast(okMsg,'ok');
+      redrawCurrent();
+    } else {
+      // Chưa có sổ: dòng tạm đổi sang "Đã lưu" (Google chậm thì đồng bộ có thể mất 30–40s, đo 27/09),
+      // ở lại tới khi một lượt đồng bộ BẮT ĐẦU SAU lúc lưu mang bản thật về (xem syncBook).
+      tmp.saved = true; tmp.savedSeq = _syncSeq;
+      showToast(okMsg,'ok');
+      renderRows();
+    }
+    return syncBook(true).catch(() => {});
   }, e => {
     S.pending = S.pending.filter(x => x !== tmp);
     renderRows();
     showToast('Lỗi khi lưu "'+fmtDetail(preview.detail)+'" '+fmt(preview.amount)+'đ: '+e.message+' — xem danh sách, chưa có thì ghi lại','err',7000);
-  }).then(() => syncBook(true).catch(() => {}));
+    return syncBook(true).catch(() => {});
+  });
+}
+
+// Dòng Code.gs sẽ ghi cho một khoản chi/thu (addRow): người là chủ app → Cá nhân + Đã thu.
+function rowOfAdd(name, detail, amount, sub, isIncome) {
+  if (isIncome) return { name, category:'Thu nhập', subcategory:sub, detail, amount, collected:true };
+  const isOwner = name === OWNER;
+  return { name, category: isOwner ? 'Cá nhân' : 'Cho mượn/ Ứng', subcategory:sub, detail, amount, collected:isOwner };
 }
 
 function submit0() {
@@ -1701,12 +1771,17 @@ function submit0() {
         const res = await api({ action:'addFronted', person, detail:detail||'Chi tiêu', amount:amt, subcategory:sub, subDebt });
         S.lastRowIndex = res.firstRow; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };   // dòng đầu block = mình chi (Code.gs addFronted)
+        const d = detail||'Chi tiêu';
+        return { firstRow: res.firstRow, rows: [
+          { name:OWNER,  category:'Cá nhân',       subcategory:sub,     detail:d, amount:amt,  collected:true },
+          { name:person, category:'Cho mượn/ Ứng', subcategory:subDebt, detail:d, amount:-amt, collected:false } ] };
       } catch(eF) {
         if (!/Unknown action/i.test(eF.message)) throw eF;   // lỗi thật (vd 404) → không fallback, tránh ghi trùng
         const r1 = await api({ action:'addRow', name:OWNER, detail:detail||'Chi tiêu', amount:amt, subcategory:sub });
         await api({ action:'addRow', name:person, detail:detail||'Bạn nợ họ', amount:-amt, subcategory:subDebt });
         S.lastRowIndex = r1.rowIndex; S.lastRowCount = 2; S.lastRowTime = Date.now();
         S.lastRowVerify = { name:OWNER, amount:amt };
+        return null;   // backend cũ, 2 lệnh rời: số dòng có thể không liền nhau → đợi đồng bộ như trước
       }
     };
   } else if (isIOwe) {
@@ -1717,6 +1792,7 @@ function submit0() {
       const r1 = await api({ action:'addRow', name:person, detail:detail||'Vay tiền mặt', amount:-amt, subcategory:sub });
       S.lastRowIndex = r1.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
       S.lastRowVerify = { name:person, amount:-amt };   // dòng nợ ghi số ÂM
+      return { firstRow: r1.rowIndex, rows: [rowOfAdd(person, detail||'Vay tiền mặt', -amt, r1.subcategory || sub, false)] };
     };
   } else {
     const params = isThu
@@ -1728,6 +1804,7 @@ function submit0() {
       const res = await api(params);
       S.lastRowIndex = res.rowIndex; S.lastRowCount = 1; S.lastRowTime = Date.now();
       S.lastRowVerify = { name: params.name, amount:amt };
+      return { firstRow: res.rowIndex, rows: [rowOfAdd(params.name, params.detail, amt, res.subcategory || sub, isThu)] };
     };
   }
   resetTab(0); goBack();
@@ -1747,6 +1824,14 @@ function submit1() {
     // Dòng đầu block = people[0] nhận phần dư làm tròn (khớp Code.gs addSplit: per + rem)
     const per = res.perPerson, rem = amt - per*people.length;
     S.lastRowVerify = { name:people[0], amount:per + rem };
+    // Y như Code.gs addSplit: mỗi người 1 dòng, người đầu nhận phần dư làm tròn; chi tiết ghi kèm tổng.
+    const chiTiet = detail + ' (tổng ' + String(amt).replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ' / ' + people.length + ' người)';
+    const hmCM = (matchHM(HM_CHO_MUON, detail) || {}).name || '';
+    return { firstRow: res.firstRow, rows: people.map((name, i) => {
+      const isOwner = name === OWNER;
+      return { name, category: isOwner ? 'Cá nhân' : 'Cho mượn/ Ứng', subcategory: isOwner ? sub : hmCM,
+               detail: chiTiet, amount: i === 0 ? per + rem : per, collected: isOwner };
+    }) };
   };
   resetTab(1); goBack();
   return saveInBackground({ name:OWNER, category:'Cá nhân', subcategory:sub, detail:detail+' (chia '+people.length+' người)', amount:amt }, work, 'Đã chia bill thành công ✓');
@@ -1878,6 +1963,7 @@ async function saveEdit() {
     await api(params);
     closeBs('bs-edit');
     showToast('Đã lưu thay đổi ✓','ok');
+    bookEditRow(r.rowIndex, params, OWNER); redrawCurrent();   // số đổi ngay, không đợi tải lại cả sổ
     syncBook(true).catch(()=>{});
   } catch(e) { showToast('Lỗi: '+e.message,'err'); }
   setLoading(btn, false);

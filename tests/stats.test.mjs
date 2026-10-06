@@ -36,13 +36,15 @@ function eq(name, actual, expect) { return check(name + ` = ${JSON.stringify(exp
 const row = (date, cat, sub, amount, opt = {}) =>
   [date, opt.name || 'Khoa', cat, sub, opt.detail || '', amount, opt.collected === true, opt.collectedDate || ''];
 
-function makeBackend(rows, cfg = [], cats = []) {
+// fmtDate: Sheet giả mặc định trả nguyên Date (các mục cũ dựa vào đó); mục 16 cần ngày dd/MM/yyyy như Google.
+function makeBackend(rows, cfg = [], cats = [], fmtDate = (d) => d) {
   const sheet = {
     getLastRow: () => rows.length + 1,                     // +1 vì dòng 1 là header
     appendRow: (v) => { rows.push(v.slice()); },
     getRange: (r, c, nr, nc) => ({
       getValues: () => rows.slice(r - 2, r - 2 + nr).map(x => x.slice(c - 1, c - 1 + nc)),
-      getValue:  () => (r === 1 ? 'tiêu đề' : rows[r - 2][c - 1])   // dòng 1 = header (ensureSetup đọc)
+      getValue:  () => (r === 1 ? 'tiêu đề' : rows[r - 2][c - 1]),  // dòng 1 = header (ensureSetup đọc)
+      setValue:  (v) => { rows[r - 2][c - 1] = v; }                  // editRow ghi từng ô
     })
   };
   // Các tab phụ (tên người, hạng mục, cấu hình) có sẵn nhưng trống → ensureSetup không phải tạo mới
@@ -57,7 +59,7 @@ function makeBackend(rows, cfg = [], cats = []) {
   const ctx = vm.createContext({
     SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => (n === 'to_nhap_lieu' ? sheet : n === 'cau_hinh' ? cfgTab : n === 'hang_muc' ? catTab : emptyTab) }) },
     ContentService: { createTextOutput: out, MimeType: { JSON: 'application/json' } },
-    Utilities:      { formatDate: (d) => d },
+    Utilities:      { formatDate: fmtDate },
     LockService:    { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     console
   });
@@ -566,7 +568,7 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
       if (params.action === 'addRow') {
         rows.push(row(today, 'Cá nhân', '', Number(params.amount), { detail: params.detail }));
         json = { success: true, rowIndex: rows.length + 1 };
-      } else if (params.action === 'getRows' && params.scope === 'all' && giuDongBo && app.run('S.pending.length') > 0) {
+      } else if (params.action === 'getRows' && params.scope === 'all' && giuDongBo && (dongBoLoi || app.run('S.pending.length') > 0)) {
         if (dongBoLoi && daThaLoi) throw new Error('Google 404');   // app tự thử lại → hỏng ngay, không treo
         await new Promise(r => { thaDongBo = r; });   // đồng bộ sau khi ghi: treo tới khi test thả
         if (dongBoLoi) { daThaLoi = true; throw new Error('Google 404'); }
@@ -584,13 +586,14 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
     eq('14.2 đồng bộ xong → khoản hiện đúng 1 lần (dòng tạm đã gỡ)', (list().match(/>bún chả</g) || []).length, 1);
     check('14.2 đồng bộ xong → hết nhãn "Đã lưu · đang đồng bộ"', !list().includes('đang đồng bộ'));
 
-    // Đồng bộ HỎNG sau khi lưu thành công → khoản vẫn nằm trên màn, không biến mất như chưa ghi
+    // Đồng bộ HỎNG sau khi lưu thành công → khoản vẫn nằm trên màn, không biến mất như chưa ghi.
+    // Từ 29/09: đã có sổ trên máy (lượt trên) nên khoản vào thẳng sổ như dòng thật, không còn dòng tạm.
     dongBoLoi = true; thaDongBo = null;
     app.run("S.selectedPerson0='Khoa'; S.amts[0]='15000'; document.getElementById('dt0').value='nước mía'");
     const done2 = app.run('submit0()');
     for (let i = 0; i < 5 && !thaDongBo; i++) await new Promise(r => setTimeout(r, 0));
     thaDongBo(); await done2;
-    check('14.2 lưu được mà đồng bộ hỏng → khoản vẫn hiện "Đã lưu"', list().includes('nước mía') && list().includes('Đã lưu'), list().slice(0, 300));
+    check('14.2 lưu được mà đồng bộ hỏng → khoản vẫn hiện (đã vào sổ trên máy)', list().includes('nước mía') && app.run('S.book.rows.some(r => r.detail === "nước mía")'), list().slice(0, 300));
     dongBoLoi = false; giuDongBo = false;
     await app.run('syncBook(true)');
     eq('14.2 lượt đồng bộ sau thành công → khoản thật thay dòng tạm, không trùng', (list().match(/>nước mía</g) || []).length, 1);
@@ -687,6 +690,139 @@ console.log('=== TEST MÀN THỐNG KÊ (chạy logic production) ===\n');
       const r = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
       eq('15.1 mở đúng dòng tháng 7 (có số dòng Sheet để sửa)', [r.detail, r.rowIndex], ['phở tháng 7', 2]);
     }
+  }
+}
+
+// ============ 16. TỐC ĐỘ 29/09: LƯU XONG SỐ ĐỔI NGAY + HẠN CHỜ GOOGLE + MỞ APP BẰNG BẢN LƯU ============
+{
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+  const soSanh = r => [r.rowIndex, r.date, r.name, r.category, r.subcategory, r.detail, r.amount, r.collected];
+
+  // (1) Có sổ trên máy: ghi xong là dòng thật vào sổ + số dư đổi NGAY, trong khi lượt tải cả sổ còn treo.
+  //     Dòng máy tự dựng phải trùng từng trường với dòng Code.gs thật ghi vào Sheet (trừ ngày: Sheet giả
+  //     không định dạng ngày).
+  {
+    const CATS = [['🍜', 'Tiền ăn', 'Cá nhân', 'ăn, bún'], ['🍚', 'Cơm nước', 'Cho mượn/ Ứng', 'bún, cơm'], ['💰', 'Lương', 'Thu nhập', 'lương']];
+    const cfg = [['so_du_ban_dau', 1000000], ['tu_ngay', '01/01/2020']];
+    const rows = [row(today, 'Cá nhân', 'Tiền ăn', 10000, { detail: 'cũ' })];
+    const ngayVN = d => Object.prototype.toString.call(d) === '[object Date]' ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() : d;
+    const be = makeBackend(rows, cfg, CATS, ngayVN);
+    const app = makeApp(be);
+    app.run("initMonthTabs(); S.screen='home'; applyConfig(__in)", be({ action: 'getConfig' }));
+    await app.run('loadHome()');
+    let giu = false, tha = [];
+    app.ctx.fetch = async (u) => {
+      const url = new URL(u); const params = {}; url.searchParams.forEach((v, k) => (params[k] = v));
+      app.net.calls.push(params);
+      if (giu && params.action === 'getRows') await new Promise(r => tha.push(r));   // Google chậm: đồng bộ treo
+      const json = be(params);
+      return { ok: true, status: 200, json: async () => json };
+    };
+    const list = () => app.els.get('tx-list').innerHTML;
+    const doi = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0)); };
+    const ghi = [
+      ['chi của mình', "S.selectedPerson0='Khoa'; setDir('them_owe'); S.kind0='chi'; getHM = () => 'Tiền ăn'; S.amts[0]='45000'; document.getElementById('dt0').value='bún bò'", 'submit0()'],
+      ['thu nhập', "setKind('thu'); getHM = () => ''; S.amts[0]='7000000'; document.getElementById('dt0').value='lương tháng 9'", 'submit0()'],
+      ['họ trả giúp', "setKind('chi'); S.selectedPerson0='Việt'; setDir('i_owe'); setOweMode('fronted'); getHM = () => 'Tiền ăn'; S.amts[0]='55000'; document.getElementById('dt0').value='bún thập cẩm'", 'submit0()'],
+      ['vay tiền mặt', "S.selectedPerson0='Việt'; setDir('i_owe'); setOweMode('cash'); getHM = () => ''; S.amts[0]='200000'; document.getElementById('dt0').value='mượn tạm'", 'submit0()'],
+      ['chia bill', "getHM = () => 'Tiền ăn'; S.amts[1]='100000'; document.getElementById('dt1').value='bún chả'; document.querySelectorAll = (q) => q === '#pc1 .chip-on' ? [{dataset:{name:'Khoa'}},{dataset:{name:'Việt'}},{dataset:{name:'Hải'}}] : []", 'submit1()']
+    ];
+    for (const [ten, chuanBi, lenh] of ghi) {
+      const truoc = rows.length;
+      giu = true; tha = [];
+      app.run(chuanBi);
+      const done = app.run(lenh);
+      await doi();
+      check(`16.1 ${ten}: đồng bộ còn treo mà sổ trên máy đã có dòng mới`, tha.length > 0 && app.run('S.book.rows.length') === rows.length, [tha.length, app.run('S.book.rows.length'), rows.length]);
+      const sheet = be({ action: 'getRows', scope: 'all' }).rows.slice(0, rows.length - truoc).map(soSanh);
+      eq(`16.1 ${ten}: dòng máy dựng == dòng Code.gs ghi (số dòng, ngày, người, phân loại, hạng mục, chi tiết, tiền, đã thu)`,
+         app.run('S.book.rows.slice(0, __in).map(r => [r.rowIndex, r.date, r.name, r.category, r.subcategory, r.detail, r.amount, r.collected])', rows.length - truoc), sheet);
+      eq(`16.1 ${ten}: số dư đổi ngay == getBalance của Google`, app.els.get('card-total').textContent,
+         (b => (b < 0 ? '-' : '') + app.run('fmt(__in)', b))(be({ action: 'getBalance' }).balance));
+      check(`16.1 ${ten}: không còn dòng tạm "Đang lưu"/"Đã lưu"`, app.run('S.pending.length') === 0 && !list().includes('Đang lưu') && !list().includes('Đã lưu'), list().slice(0, 200));
+      giu = false; tha.forEach(r => r()); await done;
+      eq(`16.1 ${ten}: đồng bộ xong vẫn đúng số dòng (không trùng)`, app.run('S.book.rows.length'), rows.length);
+    }
+
+    // Sửa khoản cũ: số đổi ngay theo đúng luật editRow (đổi người → đổi phân loại + đã thu)
+    const cu = app.run('S.book.rows.find(r => r.detail === "cũ")');
+    app.run("S.curTx = __in; document.getElementById('ed-amount').value = '99000'; document.getElementById('ed-detail').value = 'cũ đã sửa'; document.getElementById('ed-sub').value = 'Cơm nước'; document.getElementById('ed-name').value = 'Việt'", cu);
+    giu = true; tha = [];
+    await app.run('saveEdit()');
+    eq('16.2 lệnh sửa chạy thật tới Sheet (không thì phép so dưới vô nghĩa)', [app.els.get('toast').textContent, rows[0][4], rows[0][1]], ['Đã lưu thay đổi ✓', 'cũ đã sửa', 'Việt']);
+    eq('16.2 sửa xong (đồng bộ còn treo): dòng trên máy == dòng Code.gs vừa sửa',
+       soSanh(app.run('S.book.rows.find(r => r.rowIndex === __in)', cu.rowIndex)),
+       soSanh(be({ action: 'getRows', scope: 'all' }).rows.find(r => r.rowIndex === cu.rowIndex)));
+    giu = false; tha.forEach(r => r()); await doi();
+  }
+
+  // (2) Hạn chờ: Google treo KHÔNG còn giữ app "đang đồng bộ" mãi. Đồng hồ tua nhanh 1000 lần.
+  {
+    const app = makeApp(makeBackend([]));
+    app.ctx.setTimeout = (fn, ms) => setTimeout(fn, (ms || 0) / 1000);
+    let goi = 0, ghi = 0;
+    app.ctx.fetch = (u) => {
+      const a = new URL(u).searchParams.get('action');
+      if (a === 'getRows') goi++; else ghi++;
+      return new Promise(() => {});   // Google không bao giờ trả lời
+    };
+    const t0 = Date.now();
+    // App không tự bỏ cuộc → test ghi "TREO" sau 3s thật thay vì đứng im
+    const chan = (p) => Promise.race([p, new Promise(r => setTimeout(() => r('TREO'), 3000))]);
+    const loi = await chan(app.run('syncBook(true)').then(() => '', e => e.message));
+    check('16.3 đồng bộ treo → bỏ cuộc có lỗi rõ, không treo mãi', /không trả lời/.test(loi), loi);
+    eq('16.3 lệnh đọc: 3 lượt (1 + thử lại 2)', goi, 3);
+    check('16.3 xong lượt thì nhả khóa đồng bộ (lần sau gọi được lượt mới)', app.run('_syncing') === null && !!app.run('S.syncErr'));
+    check('16.3 [tua nhanh] cả chuỗi dưới 2s', Date.now() - t0 < 2000, Date.now() - t0);
+
+    // Đã có sổ (vừa đồng bộ) → màn chủ không báo "Lỗi tải dữ liệu" đè lên toast của lệnh ghi
+    app.run("S.book = { rows: [], at: Date.now() }; initMonthTabs(); OWNER='Khoa'; S.selectedPerson0='Khoa'; S.kind0='chi'; S.amts[0]='30000'; document.getElementById('dt0').value='trà đá'");
+    eq('16.3 lệnh ghi treo → có kết thúc', await chan(app.run('submit0()').then(() => 'XONG')), 'XONG');
+    eq('16.3 lệnh ghi treo → hết hạn, KHÔNG tự thử lại (chống ghi trùng)', ghi, 1);
+    const toast = app.els.get('toast').textContent;
+    check('16.3 lệnh ghi treo → báo rõ khoản nào + "xem danh sách"', toast.includes('trà đá') && toast.includes('không trả lời') && toast.includes('xem danh sách'), toast);
+    check('16.3 lệnh ghi treo → không để dòng "Đang lưu" kẹt', !app.els.get('tx-list').innerHTML.includes('Đang lưu'));
+  }
+
+  // (3) Service worker: mạng ì (không báo lỗi, không trả lời) mà máy có bản lưu → trả bản lưu NGAY.
+  {
+    const SW_SRC = readFileSync(join(ROOT, 'pwa', 'sw.js'), 'utf8');
+    const kho = new Map();
+    const cache = { put: async (req, res) => { kho.set(req.url, res); }, addAll: async () => {} };
+    let mang = () => new Promise(() => {});   // lie-fi
+    const nghe = {};
+    const sw = vm.createContext({
+      URL, console, Promise,
+      self: { addEventListener: (ten, fn) => { nghe[ten] = fn; }, skipWaiting() {}, clients: { claim() {} } },
+      caches: { open: async () => cache, keys: async () => [], delete: async () => true,
+                match: async (req, opt) => kho.get(opt && opt.ignoreSearch ? req.url.split('?')[0] : req.url) },
+      fetch: (req) => mang(req)
+    });
+    vm.runInContext(SW_SRC, sw);
+    const phat = (url, mode = 'no-cors') => {
+      let tra = null; const cho = [];
+      nghe.fetch({ request: { url, mode, method: 'GET' }, respondWith: (p) => { tra = p; }, waitUntil: (p) => cho.push(p) });
+      return tra;
+    };
+    const hetGio = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r('TREO'), ms))]);
+    kho.set('https://x.github.io/app-chi-tieu/', 'BẢN LƯU');
+    eq('16.4 mở app, mạng ì → trả bản lưu ngay', await hetGio(phat('https://x.github.io/app-chi-tieu/?source=pwa', 'navigate'), 200), 'BẢN LƯU');
+    kho.set('https://fonts.googleapis.com/css2?family=A', 'FONT LƯU');
+    eq('16.4 font Google, mạng ì → trả bản lưu ngay (font chặn vẽ trang)', await hetGio(phat('https://fonts.googleapis.com/css2?family=A'), 200), 'FONT LƯU');
+    eq('16.4 gọi Apps Script → service worker không chen vào', phat('https://script.google.com/macros/s/x/exec?action=getRows'), null);
+    mang = async (req) => ({ ok: true, clone() { return 'BẢN MỚI ' + req.url; } });
+    await hetGio(phat('https://x.github.io/app-chi-tieu/', 'navigate'), 200); await new Promise(r => setTimeout(r, 0));
+    eq('16.4 mạng tốt → tải bản mới ở nền cho lần mở sau', kho.get('https://x.github.io/app-chi-tieu/'), 'BẢN MỚI https://x.github.io/app-chi-tieu/');
+    // Thật: <link> font không crossorigin → phản hồi opaque (ok=false, status 0). Phải vẫn được lưu.
+    kho.clear();
+    mang = async (req) => ({ ok: false, status: 0, type: 'opaque', clone() { return 'FONT MỚI'; } });
+    await hetGio(phat('https://fonts.googleapis.com/css2?family=B'), 200); await new Promise(r => setTimeout(r, 0));
+    eq('16.4 font Google trả opaque → vẫn vào bản lưu', kho.get('https://fonts.googleapis.com/css2?family=B'), 'FONT MỚI');
+    mang = async (req) => ({ ok: true, clone() { return 'BẢN MỚI ' + req.url; } });
+    kho.clear();
+    const lanDau = await hetGio(phat('https://x.github.io/app-chi-tieu/', 'navigate'), 200);
+    check('16.4 chưa có bản lưu → đi mạng như thường', lanDau && lanDau.ok === true, lanDau);
   }
 }
 

@@ -12,6 +12,58 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-09-29 → 06/10 — Lưu xong số đổi ngay, Google treo không kẹt app, mở app bằng bản lưu (v64)
+
+**Vấn đề (Khoa nêu):** "dạo này hơi chậm" — cụ thể là **số lâu cập nhật, lưu lâu**. Soát (Codex + Claude,
+chỉ đọc) ra 3 chỗ app tự cộng thêm thời gian chờ ngoài cái sàn ~3s/lệnh của Google:
+
+1. Một lần Lưu = **2 lượt Google nối đuôi**: lệnh ghi, rồi tải lại CẢ sổ — số dư chỉ đổi sau lượt 2.
+   Google nguội thì mỗi lượt 20–40s → cả phút mới thấy số.
+2. `api()` **không có hạn chờ**. Một lượt treo giữ `_syncing` mãi → mọi màn bám lượt đó, "đang đồng
+   bộ…" đứng tới khi tắt hẳn app; nút lưu khi sửa khoản quay mãi.
+3. Service worker **đợi mạng trước**, bản lưu chỉ dùng khi mạng BÁO LỖI. Mạng chập chờn không báo
+   lỗi mà treo → app đã cài vẫn đứng màn chờ. Font Google (chặn vẽ trang) không được lưu luôn.
+
+**Quyết định:**
+
+- Lệnh ghi thành công → **chép luôn dòng vừa ghi vào sổ trên máy** (`bookAddRows`, số dòng lấy từ
+  Google trả về) và vẽ lại ngay; tải cả sổ vẫn chạy nền để chép đè bản thật. Dòng dựng trên máy y
+  hệt Code.gs `addRow/addFronted/addSplit`. Sửa khoản (`bookEditRow`) cũng vậy, theo đúng luật
+  `editRow` (đổi chủ ↔ người khác thì đổi phân loại + "Đã thu"). Chưa có sổ trên máy hoặc backend cũ
+  (2 lệnh rời) → giữ dòng tạm "Đã lưu" như trước.
+- Hạn chờ: **đọc 30s** rồi thử lại (lượt bị bỏ vẫn đánh thức Google nên lượt sau thường nhanh),
+  **ghi 90s** và vẫn **không tự thử lại** (chống ghi trùng) — hết hạn thì toast "xem danh sách".
+- `sw.js`: trang + font Google **lấy bản lưu trả ngay, tải bản mới ở nền**. Hệ quả: bản deploy mới
+  hiện ở **lần mở kế tiếp** (trước là ngay lần đầu nếu mạng tốt). Bump `v64`.
+- **Không đổi backend** — Code.gs giữ nguyên, không phải dán lại.
+
+**Vì sao:** Không làm Google nhanh hơn được; chỉ bỏ được những lần app bắt người dùng ngồi chờ
+Google không cần thiết. Dòng vừa ghi thì app đã biết hết nội dung + số dòng, chờ tải lại cả sổ chỉ
+để thấy lại chính nó.
+
+**Rủi ro:** hạng mục do Google tự dò (khi không chọn chip) có thể lệch vài giây tới lượt đồng bộ —
+máy dò bằng `matchHM`, Google bằng `autoHM`. Số dư/tiền không phụ thuộc hạng mục.
+
+**Bằng chứng:** `tests/stats.test.mjs` **148/148**. Mục 16 mới: 5 kiểu ghi, dòng máy dựng == dòng
+Code.gs thật ghi (từng trường) + số dư == `getBalance` **trong lúc đồng bộ còn treo**; sửa khoản;
+Google không trả lời → đọc bỏ cuộc sau 3 lượt, ghi 1 lượt không thử lại; service worker với mạng ì.
+Thử phá 4 chỗ (bỏ chép vào sổ, bỏ sửa trên máy, bỏ hạn chờ, service worker về đợi mạng) → cả 4 đỏ.
+Test cũ 14.2 đổi theo hành vi mới (có sổ thì không còn dòng tạm). Sheet giả thêm `setValue` — trước
+đó mọi lệnh `editRow` trong test lỗi ngầm.
+
+**Bổ sung 06/10 (phiên tiếp quản, trước khi commit):** Khoa hỏi "có phải vì dữ liệu nhiều nên
+chậm?" — không: soát 27/09 đã thử 10 năm sổ vẫn < 0,01s; chậm là do chờ Google + 3 chỗ trên, mà
+bản v64 nằm chưa commit từ 29/09 nên điện thoại vẫn chạy v63. Soát lại diff, bắt thêm 1 lỗ: CSS
+font Google nạp bằng `<link>` không `crossorigin` → phản hồi "opaque" (`ok=false`) → không bao giờ
+vào bản lưu, mạng ì vẫn chặn vẽ. `sw.js` nhận cả opaque; test 16.4 cũ tự nhét sẵn font vào bản lưu
+nên không thấy → thêm test opaque (gỡ sửa → đỏ). Node **149/149**, `stats.browser.js` **30/30**.
+**Đo đầu-cuối Chromium** (server cục bộ chạy Code.gs thật trên Sheet giả, mỗi lệnh trễ 5s như
+Google; service worker thật): | | v63 (đang chạy) | v64 | — Lưu xong số dư đổi: **10,1s → 5,0s**
+(đúng 1 lượt Google); mở lại app khi mạng ì: **treo >15s → 0,1s**; font trong bản lưu: **0 → 2**.
+Dòng vừa ghi hiện đầu danh sách đúng ngày; số dư khớp sau lượt đồng bộ thật.
+
+---
+
 ## 2026-09-27 (chiều) — Sửa khoản cũ ngay trong app + "Cần xem lại" + Họ trả giúp đúng hạng mục
 
 **Vấn đề (Khoa nêu):** (a) chi "Tiền ăn" hay bị thành "Cơm nước", phải sửa tay; (b) khoản ở tháng xa

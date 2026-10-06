@@ -58,7 +58,9 @@ tab `to_nhap_lieu` cột: **Ngày | Tên | Phân loại | Hạng mục | Chi ti�
 **SỔ TRÊN MÁY (local-first, từ v60):** mỗi lệnh Apps Script ~3s sàn, lúc nguội 40–80s (đo 25/09),
 nên frontend giữ bản sao cả sổ (`ct_book`), vẽ từ đó rồi `syncBook()` ở nền. Số liệu tính bằng
 `local*` trong index.html = bản dịch 1-1 của `*Of` trong Code.gs → **sửa công thức phải sửa CẢ HAI**,
-test mục 12 so hai bên. Lệnh ghi chạy nền (`saveInBackground`) rồi ép đồng bộ.
+test mục 12 so hai bên. Lệnh ghi chạy nền (`saveInBackground`), xong thì chép dòng vừa ghi vào sổ
+trên máy (`bookAddRows`/`bookEditRow` = bản dịch `addRow/addSplit/addFronted/editRow` → **sửa luật
+ghi phải sửa CẢ HAI**, test mục 16) rồi ép đồng bộ. Gọi Google có hạn chờ: đọc 30s, ghi 90s.
 
 ---
 

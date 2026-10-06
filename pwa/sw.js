@@ -1,4 +1,4 @@
-const CACHE = 'chi-tieu-v63';
+const CACHE = 'chi-tieu-v64';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
@@ -13,9 +13,30 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Vỏ app = trang + font Google. Font là stylesheet chặn vẽ: mạng ì thì cả trang đứng chờ.
+const isShell = req => req.mode === 'navigate' ||
+  /(^|\.)fonts\.(googleapis|gstatic)\.com$/.test(new URL(req.url).hostname);
+
 self.addEventListener('fetch', e => {
   // Không cache API calls (Apps Script)
   if (e.request.url.includes('script.google.com')) return;
+  if (e.request.method !== 'GET') return;
+  if (isShell(e.request)) {
+    // Vỏ app (29/09): có bản trên máy thì trả NGAY, tải bản mới ở nền cho lần mở sau. Trước đây đợi
+    // mạng trước, chỉ khi mạng BÁO LỖI mới dùng bản lưu — mạng chập chờn không báo lỗi mà cứ treo,
+    // nên app đã cài vẫn đứng màn chờ. Bản mới (deploy) hiện ở lần mở kế tiếp.
+    // CSS font nạp bằng <link> không crossorigin → phản hồi "opaque" (ok=false, status 0) dù tải được;
+    // không nhận opaque thì font không bao giờ vào bản lưu và mạng ì vẫn chặn vẽ (06/10).
+    const moi = fetch(e.request).then(res => {
+      if (res.ok || res.type === 'opaque') { const copy = res.clone(); return caches.open(CACHE).then(c => c.put(e.request, copy)).then(() => res); }
+      return res;
+    });
+    e.waitUntil(moi.catch(() => {}));
+    // Trang mở từ biểu tượng có thể kèm ?… → so khớp bỏ phần đó
+    e.respondWith(caches.match(e.request, { ignoreSearch: e.request.mode === 'navigate' })
+      .then(hit => hit || moi));
+    return;
+  }
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );
