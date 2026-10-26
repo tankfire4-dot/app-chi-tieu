@@ -154,6 +154,11 @@
     .btn.grad-btn,.btn.grad-btn-purple{color:#fff}
     .btn.grad-btn-green{color:#fff}
     #card-total,#debt-net,#d0,#d1{font-variant-numeric:tabular-nums}
+    /* Che số thẻ số dư (26/10): chữ thật vẫn được render, chỉ thu cỡ 0 và vẽ chấm thay */
+    .money-hidden .money{font-size:0!important}
+    .money-hidden .money::after{content:'••••••';font-size:12px;letter-spacing:1px}
+    .money-hidden #card-total::after{content:'••••••••';font-size:2.5rem;letter-spacing:2px}
+    .money-hidden #card-real::after{font-size:14px}
   </style>
 </head>
 <body>
@@ -220,12 +225,17 @@
   <div class="mx-4 rounded-3xl grad-purple relative overflow-hidden mb-5" onclick="openReconcile()" style="cursor:pointer;padding:24px 22px;box-shadow:0 20px 40px -16px rgba(79,70,229,0.55)">
     <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full" style="background:rgba(255,255,255,0.07)"></div>
     <div class="absolute -bottom-14 -left-6 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
-    <div class="relative">
+    <div class="relative money-hidden" id="money-wrap">
       <div class="flex justify-between items-center mb-1">
-        <p class="text-xs font-bold uppercase tracking-widest" style="color:#c7d2fe;letter-spacing:0.08em">Số dư khả dụng</p>
+        <p class="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style="color:#c7d2fe;letter-spacing:0.08em">Số dư khả dụng
+          <button id="money-eye" onclick="event.stopPropagation();toggleMoney()" aria-label="Hiện số" style="background:none;border:0;padding:4px;margin:-4px;color:#c7d2fe;cursor:pointer;display:flex">
+            <svg id="eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            <svg id="eye-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </p>
         <span class="text-xs font-bold px-3 py-1.5 rounded-full" style="background:rgba(255,255,255,0.16);color:#fff">Đối soát</span>
       </div>
-      <p class="text-white font-extrabold mb-3" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---</p>
+      <p class="text-white font-extrabold mb-3 money" id="card-total" style="font-size:2.5rem;letter-spacing:-1px">---.---</p>
       <div class="flex rounded-full overflow-hidden mb-2" style="height:9px;background:rgba(255,255,255,0.18)">
         <div id="bar-avail" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
         <div id="bar-other" style="width:0;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
@@ -233,16 +243,16 @@
       <div style="font-size:12px;color:#c7d2fe">
         <div class="flex justify-between items-center" style="margin-bottom:4px">
           <span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:3px;background:#c7d2fe;flex-shrink:0"></span>Khả dụng</span>
-          <span id="leg-avail" style="font-weight:600;color:#fff">---</span>
+          <span id="leg-avail" class="money" style="font-weight:600;color:#fff">---</span>
         </div>
         <div class="flex justify-between items-center">
           <span class="flex items-center gap-2"><span id="leg-dot" style="width:9px;height:9px;border-radius:3px;background:#34d399;flex-shrink:0"></span>Công nợ</span>
-          <span id="leg-debt" style="font-weight:600">---</span>
+          <span id="leg-debt" class="money" style="font-weight:600">---</span>
         </div>
       </div>
       <div class="flex justify-between items-center" style="border-top:1px solid rgba(255,255,255,0.16);margin-top:11px;padding-top:9px">
         <span class="text-sm" style="color:#c7d2fe">Tài sản thực</span>
-        <span id="card-real" class="font-extrabold text-sm" style="color:#fff">---</span>
+        <span id="card-real" class="font-extrabold text-sm money" style="color:#fff">---</span>
       </div>
     </div>
   </div>
@@ -2158,9 +2168,21 @@ function hideSplash() {
   }, delay);
 }
 
+// Che số thẻ số dư (26/10): mặc định che, bấm con mắt mới hiện; rời app là che lại
+function setMoneyHidden(hide) {
+  document.getElementById('money-wrap').classList.toggle('money-hidden', hide);
+  document.getElementById('eye-off').style.display = hide ? '' : 'none';
+  document.getElementById('eye-on').style.display = hide ? 'none' : '';
+  document.getElementById('money-eye').setAttribute('aria-label', hide ? 'Hiện số' : 'Che số');
+}
+function toggleMoney() {
+  setMoneyHidden(!document.getElementById('money-wrap').classList.contains('money-hidden'));
+}
+
 // ============ INIT ============
 // Mở lại app từ nền (không tải lại trang) → hỏi Google xem có gì mới
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') setMoneyHidden(true);
   if (document.visibilityState === 'visible' && S.url && S.book) { redrawCurrent(); syncBook().catch(()=>{}); }
 });
 

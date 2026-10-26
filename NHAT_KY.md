@@ -12,6 +12,25 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-10-26 (tối) — Nút con mắt che số trên thẻ số dư (v66)
+
+**Vấn đề:** Đổi định danh (v65) đã lên thật mà Chrome Xiaomi vẫn không cài được app → app vẫn chạy
+trong tab, ai mở Chrome là thấy số. Khoa bỏ hướng cài app, cũng không cần PIN kiểu app ngân hàng:
+chỉ cần che số tổng bằng con mắt, muốn xem thì bấm.
+
+**Quyết định:** thẻ số dư mặc định CHE 4 con số (số dư, Khả dụng, Công nợ, Tài sản thực) thành
+chấm; con mắt cạnh chữ "Số dư khả dụng" bấm để hiện/che. Rời app (thoát Chrome, tắt màn, chuyển tab)
+→ tự che lại. Mở trang lần mới cũng che. Các màn khác (Lịch sử, Thống kê, Công nợ) giữ nguyên.
+
+**Vì sao:** che bằng CSS (`.money-hidden .money` cỡ chữ 0 + chấm `::after`) nên `renderBalance` và
+các id không đổi — đúng quy tắc vàng. Nút có `stopPropagation` để bấm mắt không mở Đối soát.
+Không lưu trạng thái "đang hiện" vào máy: lần mở nào cũng bắt đầu bằng che.
+
+**Rủi ro:** thanh màu khả dụng/công nợ vẫn hiện tỉ lệ (không có số). Kiểm bằng Playwright: mặc định
+che, bấm hiện, giả rời app che lại, không mở Đối soát; test 149/149, browser 30/30.
+
+---
+
 ## 2026-10-26 — Đổi định danh app để cài lại được trên Xiaomi (v65)
 
 **Vấn đề:** Icon Chi Tiêu trên máy Khoa (Redmi 23053RN02A, Android 15, Chrome 155) chỉ là lối tắt
