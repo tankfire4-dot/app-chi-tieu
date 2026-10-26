@@ -12,6 +12,27 @@ Mỗi mục theo khung: **Vấn đề → Quyết định → Vì sao → Bài h
 
 ---
 
+## 2026-10-26 — Đổi định danh app để cài lại được trên Xiaomi (v65)
+
+**Vấn đề:** Icon Chi Tiêu trên máy Khoa (Redmi 23053RN02A, Android 15, Chrome 155) chỉ là lối tắt
+mở tab trình duyệt → mở Chrome đọc truyện thì tab sổ chi tiêu hiện ra trước mặt người khác. Gỡ đi
+cài lại thì Chrome báo "ứng dụng đã được cài đặt", bấm Mở thì "không thể mở ứng dụng". Cắm adb đọc
+log: `cr_WebApkValidator: WebApk validation failure - WebAPK is not a single APK`, trong khi máy
+KHÔNG còn gói WebAPK nào của Chi Tiêu (gói duy nhất là khảo sát hiện trường, mở vẫn chạy). Chrome
+nhớ một bản cài cũ hỏng theo địa chỉ app; khởi động lại Chrome không hết.
+
+**Quyết định:** manifest thêm `id` + đổi `start_url` sang `/app-chi-tieu/?app=2`, ghi rõ `scope`.
+Bump `chi-tieu-v65`. Không đụng index.html/Code.gs.
+
+**Vì sao:** Chrome nhận diện app theo `id` (thiếu thì lấy `start_url`). Định danh mới = app mới
+trong mắt Chrome → hiện lại nút "Cài đặt ứng dụng", bỏ qua bản ghi cũ hỏng. Không xóa dữ liệu site
+(sổ trên máy có thể còn dòng chưa đồng bộ). `?app=2` vô hại: service worker so khớp trang bỏ phần `?`.
+
+**Rủi ro:** người đã cài bản cũ (nếu có) sẽ thấy 2 app — gỡ bản cũ. Cài lại chưa kiểm trên máy thật
+lúc ghi mục này.
+
+---
+
 ## 2026-09-29 → 06/10 — Lưu xong số đổi ngay, Google treo không kẹt app, mở app bằng bản lưu (v64)
 
 **Vấn đề (Khoa nêu):** "dạo này hơi chậm" — cụ thể là **số lâu cập nhật, lưu lâu**. Soát (Codex + Claude,
